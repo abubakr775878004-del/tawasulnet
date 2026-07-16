@@ -13,23 +13,19 @@ async function processUploadedPDF(packageId) {
             const page = await pdf.getPage(i);
             const textContent = await page.getTextContent();
             
-            // في ملف الـ PDF الخاص بك، الأرقام تبدو كأرقام 8 خانات
-            // سنقوم بالبحث عن أي نص يتكون من 8 أرقام فقط
             textContent.items.forEach(item => {
                 let text = item.str.trim();
                 
-                // النمط الجديد: يبحث عن أرقام بطول 8 خانات بالضبط
-                if (/^\d{8}$/.test(text)) {
-                    // نتأكد أنها ليست من النصوص المكررة (مثل السعر 500)
-                    if (text !== "500") {
-                        firebase.database().ref('cards/available').push({
-                            code: text,
-                            packageId: packageId,
-                            addedAt: Date.now(),
-                            status: 'متوفر'
-                        });
-                        count++;
-                    }
+                // 1. يجب أن يكون طول النص بين 6 و 8 أرقام
+                // 2. يجب ألا يبدأ النص بـ 77 (لأن هذا رقم الجوال)
+                if (/^\d{6,8}$/.test(text) && !text.startsWith('77')) {
+                    firebase.database().ref('cards/available').push({
+                        code: text,
+                        packageId: packageId,
+                        addedAt: Date.now(),
+                        status: 'متوفر'
+                    });
+                    count++;
                 }
             });
         }
