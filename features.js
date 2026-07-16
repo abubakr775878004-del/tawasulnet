@@ -1,13 +1,13 @@
-// تأكد من وضع هذا الكود في ملف features.js
+// دالة واحدة فقط لعرض أزرار الـ PDF
 function renderPDFButtons() {
-    const container = document.getElementById('admin-pdf-containers');
+    const pdfContainer = document.getElementById('admin-pdf-containers');
     
-    // هذا الشرط يضمن أنه إذا لم يجد الصندوق، لن يتسبب بأي خطأ في الموقع
-    if (container) {
-        container.innerHTML = `
-            <div style="margin-bottom: 20px; text-align: center;">
-                <a href="رابط_ملفك_هنا.pdf" target="_blank" 
-                   style="background-color: var(--primary); color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none; display: block; font-weight: bold;">
+    // التأكد من وجود الحاوية قبل التنفيذ
+    if (pdfContainer) {
+        pdfContainer.innerHTML = `
+            <div style="margin: 15px 0; text-align: center;">
+                <a href="رابط_ملفك.pdf" target="_blank" 
+                   style="display: block; padding: 12px; background-color: var(--primary); color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">
                    📄 قراءة ملف الـ PDF
                 </a>
             </div>
