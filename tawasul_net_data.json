@@ -1,0 +1,11 @@
+{
+  "users": {
+    "7Pym28zMJJNseBr8HUYM2cHsjWD2": {
+      "email": "abubakr775878004@gmail.com",
+      "role": "admin",
+      "type": "admin",
+      "isAdmin": true,
+      "level": 1
+    }
+  }
+}
