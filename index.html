@@ -10,8 +10,13 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <!-- في رأس الصفحة <head> -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <div id="admin-pdf-containers" style="display:inline-block; vertical-align:middle; padding:5px;">
+    <input type="file" id="pdf-file" accept="application/pdf" style="max-width:150px;">
+    <button onclick="processPDF()" style="background:#007bff; color:white; padding:5px 10px; border:none; cursor:pointer;">استخراج</button>
+    <div id="preview-area" style="font-size:12px; color:red;"></div>
+</div>
 
-
+    
     <style>
         :root {
             --bg-body: #f4f7f6; 
