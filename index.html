@@ -1,86 +1,107 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+<script src="features.js"></script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TawasulNet</title>
-    <!-- تم تنظيف الكود بالكامل من أي مكتبات PDF -->
-    <script src="features.js"></script>
+    <!-- تضمين مكتبات Firebase الأساسية القديمة المتوافقة مع الكود -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        :root { --bg-body: #f4f7f6; --bg-gradient: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); --card-bg: #ffffff; --card-border: #e2e8f0; --primary: #1e40af; --primary-hover: #1d4ed8; --secondary: #0f766e; --text-dark: #1e293b; --text-muted: #475569; --success: #059669; --danger: #be123c; --input-focus: #3b82f6; --warning: #d97706; }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; -webkit-tap-highlight-color: transparent; }
-        body { background-color: var(--bg-body); color: var(--text-dark); min-height: 100vh; padding-bottom: 90px; font-size: 15px; }
-        header { background: var(--bg-gradient); padding: 20px; text-align: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 15px rgba(30, 58, 138, 0.15); color: white; display: flex; flex-direction: column; align-items: center; }
-        header .brand-wrapper { display: flex; align-items: center; justify-content: space-between; width: 100%; max-width: 600px; }
-        header h1 { font-size: 1.5rem; font-weight: 800; }
-        .user-pill { background: rgba(255, 255, 255, 0.25); padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: white; }
-        .container { max-width: 600px; margin: 20px auto; padding: 0 15px; }
-        .card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03); }
-        .card-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 16px; color: var(--primary); border-right: 4px solid var(--primary); padding-right: 10px; display: flex; justify-content: space-between; align-items: center; }
-        .btn { background: var(--bg-gradient); color: white; border: none; padding: 12px 18px; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 0.95rem; width: 100%; transition: all 0.3s ease; }
-        .btn-success { background: var(--success); }
-        .btn-danger { background: var(--danger); }
-        .btn-warning { background: var(--warning); }
-        .btn-info { background: #0284c7; }
-        .form-control { width: 100%; padding: 12px; border: 2px solid #cbd5e1; border-radius: 10px; margin-bottom: 15px; }
-        .tab-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #ffffff; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-around; padding: 10px 0; z-index: 1000; }
-        .tab-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; display: flex; flex-direction: column; align-items: center; }
-        .tab-btn.active { color: var(--primary); }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        .list-item { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid #e2e8f0; }
-        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 5000; }
-        .modal-content { background: white; padding: 25px; border-radius: 16px; width: 90%; max-width: 400px; }
-        #toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #0f172a; color: white; padding: 12px 24px; border-radius: 30px; display: none; z-index: 10000; }
-    </style>
-</head>
-<body>
-    <div id="login-container" class="login-screen">
-        <div class="login-card">
-            <h2 id="auth-title">TawasulNet | دخول</h2>
-            <div class="form-group"><input type="email" id="login-email" class="form-control" placeholder="البريد الإلكتروني"></div>
-            <div class="form-group"><input type="password" id="login-password" class="form-control" placeholder="كلمة المرور"></div>
-            <button class="btn" id="btn-auth-action" onclick="handleAuth()">دخول سحابي مريح</button>
-            <button class="toggle-auth-mode" id="btn-toggle-mode" onclick="toggleAuthMode()">ليس لديك حساب؟ سجل كموزع جديد الآن</button>
-        </div>
-    </div>
+        :root {
+            --bg-body: #f4f7f6; 
+            --bg-gradient: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); 
+            --card-bg: #ffffff;
+            --card-border: #e2e8f0;
+            --primary: #1e40af; 
+            --primary-hover: #1d4ed8;
+            --secondary: #0f766e; 
+            --text-dark: #1e293b; 
+            --text-muted: #475569; 
+            --success: #059669; 
+            --danger: #be123c; 
+            --input-focus: #3b82f6;
+            --warning: #d97706;
+        }
 
-    <div id="app-container" style="display: none;">
-        <header>
-            <div class="brand-wrapper">
-                <h1>TawasulNet</h1>
-                <div class="user-pill" id="user-email-display"></div>
-                <button class="btn btn-danger" style="width: auto;" onclick="handleLogout()">خروج</button>
-            </div>
-        </header>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
 
-        <div class="container">
-            <div id="tab-distributor" class="tab-content active">
-                <div class="stats-grid"><div class="stat-card"><div class="stat-val" id="dist-balance">0 ريال</div></div></div>
-                <div class="card"><div class="card-title">طلب كروت</div><select id="package-purchase-select"></select><button class="btn" onclick="submitTicketOrder()">إرسال الطلب</button></div>
-                <div id="dist-orders-list"></div>
-                <div id="dist-history-list"></div>
-            </div>
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-dark);
+            min-height: 100vh;
+            padding-bottom: 90px;
+            font-size: 15px;
+        }
 
-            <div id="tab-admin" class="tab-content">
-                <div id="admin-orders-pending-list"></div>
-                <div id="admin-dists-list"></div>
-                <div id="admin-packages-injection-container"></div>
-            </div>
+        header {
+            background: var(--bg-gradient);
+            padding: 20px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 15px rgba(30, 58, 138, 0.15);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
 
-            <div id="tab-settings" class="tab-content">
-                <div class="card"><input type="text" id="setting-actual-url" class="form-control"><button class="btn" onclick="saveActualUrlToFirebase()">حفظ الرابط</button></div>
-            </div>
-        </div>
-    </div>
+        header .brand-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 600px;
+        }
 
-    <div id="toast">تمت العملية بنجاح</div>
-    <script>
-        // (قم هنا بلصق الدوال البرمجية الخاصة بك التي أرسلتها في الأجزاء السابقة)
-        // لقد قمت بفلترتها جميعاً من أي أمر PDF.
-    </script>
-</body>
-</html>
+        header h1 {
+            font-size: 1.5rem;
+            font-weight: 800;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.15);
+        }
+
+        header p {
+            font-size: 0.85rem;
+            opacity: 0.9;
+            margin-top: 4px;
+        }
+
+        .user-pill {
+            background: rgba(255, 255, 255, 0.25);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            max-width: 180px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: white;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 0 15px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+        }
