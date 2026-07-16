@@ -1,22 +1,19 @@
-// دالة لإضافة أزرار الـ PDF داخل الحاوية المخصصة
-function initPDFAdminFeatures() {
-    const pdfContainer = document.getElementById('admin-pdf-containers');
+// تأكد من وضع هذا الكود في ملف features.js
+function renderPDFButtons() {
+    const container = document.getElementById('admin-pdf-containers');
     
-    // تأكد أن الحاوية موجودة قبل إضافة أي شيء
-    if (pdfContainer) {
-        pdfContainer.innerHTML = `
-            <div style="text-align: center;">
-                <h4 style="margin-bottom: 10px;">ملفات الـ PDF</h4>
-                <a href="link-to-your-file.pdf" target="_blank" class="btn" style="display: block; margin-bottom: 5px;">
-                    تحميل ملف المبيعات (PDF)
-                </a>
-                <a href="another-file.pdf" target="_blank" class="btn" style="display: block;">
-                    تحميل تعليمات الاستخدام (PDF)
+    // هذا الشرط يضمن أنه إذا لم يجد الصندوق، لن يتسبب بأي خطأ في الموقع
+    if (container) {
+        container.innerHTML = `
+            <div style="margin-bottom: 20px; text-align: center;">
+                <a href="رابط_ملفك_هنا.pdf" target="_blank" 
+                   style="background-color: var(--primary); color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none; display: block; font-weight: bold;">
+                   📄 قراءة ملف الـ PDF
                 </a>
             </div>
         `;
     }
 }
 
-// استدعاء الدالة عند تحميل الصفحة
-document.addEventListener('DOMContentLoaded', initPDFAdminFeatures);
+// تشغيل الدالة عند تحميل الصفحة
+window.addEventListener('load', renderPDFButtons);
