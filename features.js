@@ -1,13 +1,14 @@
-// دالة واحدة فقط لعرض أزرار الـ PDF
+// دالة عرض زر الـ PDF
 function renderPDFButtons() {
-    const pdfContainer = document.getElementById('admin-pdf-containers');
+    // نبحث عن الحاوية داخل الصفحة
+    const container = document.getElementById('admin-pdf-containers');
     
-    // التأكد من وجود الحاوية قبل التنفيذ
-    if (pdfContainer) {
-        pdfContainer.innerHTML = `
-            <div style="margin: 15px 0; text-align: center;">
+    // تأكد أن الحاوية موجودة، وأنها فارغة (لنتجنب التكرار)
+    if (container) {
+        container.innerHTML = `
+            <div style="margin: 10px 0; text-align: center;">
                 <a href="رابط_ملفك.pdf" target="_blank" 
-                   style="display: block; padding: 12px; background-color: var(--primary); color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">
+                   style="display: block; padding: 12px; background-color: #0056b3; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">
                    📄 قراءة ملف الـ PDF
                 </a>
             </div>
@@ -15,5 +16,5 @@ function renderPDFButtons() {
     }
 }
 
-// تشغيل الدالة عند تحميل الصفحة
-window.addEventListener('load', renderPDFButtons);
+// تشغيل الدالة بمجرد تحميل محتوى الصفحة بالكامل
+document.addEventListener('DOMContentLoaded', renderPDFButtons);
