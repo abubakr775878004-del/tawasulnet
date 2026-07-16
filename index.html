@@ -1673,6 +1673,341 @@
             }
         }
         // إضافة وظيفة PDF لتعمل في لوحة الإدارة
-    </script>
+        
+    </script><!-- مكتبة PDF.js من CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+<div class="admin-pdf-container">
+
+    <h3>استيراد الكروت من PDF</h3>
+
+    <!-- رفع ملف PDF -->
+    <input 
+        type="file" 
+        id="admin-pdf-upload"
+        accept="application/pdf"
+    >
+
+    <br><br>
+
+
+    <!-- اختيار الباقة -->
+    <select id="admin-package-select">
+        <option value="">اختر الباقة</option>
+    </select>
+
+
+    <br><br>
+
+
+    <!-- زر المعالجة -->
+    <button id="admin-pdf-convert">
+        استخراج وحقن البيانات
+    </button>
+
+
+    <br><br>
+
+
+    <!-- مربع الكروت الموجود بالنظام -->
+    <textarea 
+        id="admin-direct-quantity"
+        placeholder="سيتم وضع الكروت هنا">
+    </textarea>
+
+
+    <input 
+        type="hidden"
+        id="selected-package"
+    >
+
+</div>
+
+
+<script>
+
+
+// إعداد pdf.js
+
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+"https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+
+
+// ===============================
+// جلب الباقات بشكل ديناميكي
+// ===============================
+
+function loadPackages(){
+
+
+    let select =
+    document.getElementById(
+        "admin-package-select"
+    );
+
+
+    select.innerHTML =
+    '<option value="">اختر الباقة</option>';
+
+
+
+    document
+    .querySelectorAll(".card-title")
+    .forEach(function(item){
+
+
+        let name =
+        item.textContent.trim();
+
+
+        if(name){
+
+
+            let option =
+            document.createElement("option");
+
+
+            option.value=name;
+
+            option.textContent=name;
+
+
+            select.appendChild(option);
+
+
+        }
+
+
+    });
+
+
+}
+
+
+// تشغيل تحميل الباقات
+
+loadPackages();
+
+
+
+
+
+// حفظ الباقة المختارة
+
+document
+.getElementById("admin-package-select")
+.addEventListener(
+"change",
+function(){
+
+
+document.getElementById(
+"selected-package"
+).value=this.value;
+
+
+
+});
+
+
+
+
+
+// ===============================
+// استخراج PDF
+// ===============================
+
+
+document
+.getElementById("admin-pdf-convert")
+.addEventListener(
+"click",
+async function(){
+
+
+
+let file =
+document
+.getElementById(
+"admin-pdf-upload"
+)
+.files[0];
+
+
+
+if(!file){
+
+alert(
+"يرجى اختيار ملف PDF"
+);
+
+return;
+
+}
+
+
+
+
+let packageName =
+document
+.getElementById(
+"admin-package-select"
+)
+.value;
+
+
+
+if(!packageName){
+
+alert(
+"اختر الباقة أولاً"
+);
+
+return;
+
+}
+
+
+
+
+// قراءة الملف
+
+let arrayBuffer =
+await file.arrayBuffer();
+
+
+
+
+let pdf =
+await pdfjsLib
+.getDocument(
+arrayBuffer
+)
+.promise;
+
+
+
+
+let extractedText = "";
+
+
+
+
+
+// قراءة كل الصفحات
+
+for(
+let pageNumber=1;
+pageNumber<=pdf.numPages;
+pageNumber++
+){
+
+
+
+let page =
+await pdf.getPage(
+pageNumber
+);
+
+
+
+let content =
+await page.getTextContent();
+
+
+
+let pageText =
+content.items
+.map(
+item=>item.str
+)
+.join("\n");
+
+
+
+extractedText +=
+pageText +
+"\n";
+
+
+
+}
+
+
+
+
+
+
+// تنظيف البيانات
+
+let cards =
+extractedText
+.split(/\s+/)
+.filter(
+item=>item.length>0
+);
+
+
+
+
+// حذف التكرار
+
+cards =
+[
+...new Set(cards)
+];
+
+
+
+
+// تحويلها لنص
+
+let finalCards =
+cards.join("\n");
+
+
+
+
+// حقن الكروت
+
+document
+.getElementById(
+"admin-direct-quantity"
+)
+.value =
+finalCards;
+
+
+
+
+// حفظ معلومات الربط
+
+console.log({
+
+package:
+packageName,
+
+cards:
+cards
+
+});
+
+
+
+alert(
+"تم استخراج "+
+cards.length+
+" كرت وربطه مع "+
+packageName
+);
+
+
+
+});
+
+
+
+</script>
 </body>
 </html>
