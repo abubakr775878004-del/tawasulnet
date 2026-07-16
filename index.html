@@ -1738,51 +1738,26 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
 // جلب الباقات بشكل ديناميكي
 // ===============================
 
-function loadPackages(){
+    function loadPackages() {
+    let select = document.getElementById("admin-package-select");
+    if (!select) return;
 
+    select.innerHTML = '<option value="">اختر الباقة...</option>';
 
-    let select =
-    document.getElementById(
-        "admin-package-select"
-    );
-
-
-    select.innerHTML =
-    '<option value="">اختر الباقة</option>';
-
-
-
-    document
-    .querySelectorAll(".card-title")
-    .forEach(function(item){
-
-
-        let name =
-        item.textContent.trim();
-
-
-        if(name){
-
-
-            let option =
-            document.createElement("option");
-
-
-            option.value=name;
-
-            option.textContent=name;
-
-
-            select.appendChild(option);
-
-
-        }
-
-
-    });
-
-
+    // نستخدم المصفوفة 'packages' التي يستخدمها النظام بالفعل
+    if (typeof packages !== 'undefined' && Array.isArray(packages)) {
+        packages.forEach(function(pkg) {
+            // نتحقق أن الباقة لها اسم
+            if (pkg && pkg.name) {
+                let option = document.createElement("option");
+                option.value = pkg.name;
+                option.textContent = pkg.name;
+                select.appendChild(option);
+            }
+        });
+    }
 }
+
 
 
 // تشغيل تحميل الباقات
