@@ -1,44 +1,32 @@
-// ميزات إضافية لـ TawasulNet
-// 1. نظام الحذف التلقائي
-function cleanOldSoldTickets() {
-    const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
-    const now = Date.now();
-    firebase.database().ref('cards').orderByChild('status').equalTo('تم البيع').once('value', snapshot => {
-        snapshot.forEach(child => {
-            if (now - child.val().soldAt > THREE_DAYS_MS) {
-                child.ref.remove();
-            }
-        });
-    });
-}
-
-// 2. نظام PDF
-async function processUploadedPDF() {
-    const file = document.getElementById('pdf-upload-input').files[0];
-    if (!file) return alert("اختر ملف PDF!");
+async function processUploadedPDF(packageId) { // أضفنا packageId لنعرف لأي باقة يتم الرفع
+    const fileInput = document.getElementById('pdf-upload-input-' + packageId);
+    const file = fileInput.files[0];
+    if (!file) return alert("الرجاء اختيار ملف PDF!");
+    
     const reader = new FileReader();
     reader.onload = async function() {
-        const pdf = await pdfjsLib.getDocument(new Uint8Array(this.result)).promise;
+        const typedarray = new Uint8Array(this.result);
+        const pdf = await pdfjsLib.getDocument(typedarray).promise;
+        let count = 0;
+        
         for (let i = 1; i <= pdf.numPages; i++) {
-            const text = await (await pdf.getPage(i)).getTextContent();
-            text.items.forEach(item => {
-                if (/^\d{8,14}$/.test(item.str.trim())) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            textContent.items.forEach(item => {
+                let text = item.str.trim();
+                // نعدل النمط ليقبل أي أرقام من 8 إلى 14 خانة
+                if (/^\d{8,14}$/.test(text)) {
                     firebase.database().ref('cards/available').push({
-                        code: item.str.trim(),
+                        code: text,
+                        packageId: packageId, // إضافة معرف الباقة هنا
                         addedAt: Date.now(),
                         status: 'متوفر'
                     });
+                    count++;
                 }
             });
         }
-        alert("تم استخراج الكروت!");
+        alert("تم استخراج " + count + " كارت وإضافتها للباقة بنجاح!");
     };
     reader.readAsArrayBuffer(file);
 }
-
-// تشغيل تلقائي عند التحميل
-window.addEventListener('load', () => {
-    firebase.auth().onAuthStateChanged(user => {
-        if (user) cleanOldSoldTickets();
-    });
-});
