@@ -16,9 +16,17 @@ async function processUploadedPDF(packageId) {
             textContent.items.forEach(item => {
                 let text = item.str.trim();
                 
-                // 1. يجب أن يكون طول النص بين 6 و 8 أرقام
-                // 2. يجب ألا يبدأ النص بـ 77 (لأن هذا رقم الجوال)
-                if (/^\d{6,8}$/.test(text) && !text.startsWith('77')) {
+                // النمط: حرف إنجليزي واحد (كبير أو صغير) اختياري، يليه من 6 إلى 8 أرقام
+                const isCard = /^[a-zA-Z]?\d{6,8}$/.test(text);
+                
+                // استبعاد أرقام الجوالات (تبدأ بـ 77 أو 73)
+                const isPhone = text.startsWith('77') || text.startsWith('73');
+                
+                // استبعاد أرقام الأسعار المحددة
+                const isPrice = (text === '1000' || text === '500' || text === '200' || text === '300');
+
+                // إذا كان النص يطابق نمط الكرت وليس جوالاً ولا سعراً
+                if (isCard && !isPhone && !isPrice) {
                     firebase.database().ref('cards/available').push({
                         code: text,
                         packageId: packageId,
