@@ -1668,6 +1668,24 @@
                 showToast("تمت إزالة الموزع بنجاح!");
             }
         }
+        // إضافة وظيفة PDF لتعمل في لوحة الإدارة
+function setupPDFUpload() {
+    const adminTab = document.getElementById('tab-admin');
+    if (adminTab) {
+        const div = document.createElement('div');
+        div.className = 'card';
+        div.style = 'border: 2px solid #7c3aed; background: #f5f3ff; margin-bottom: 20px; padding: 15px; border-radius: 10px;';
+        div.innerHTML = `
+            <h3 style="color: #7c3aed; margin-bottom: 10px;">استيراد كروت من PDF 📄</h3>
+            <input type="file" id="pdf-upload-input" accept="application/pdf" class="form-control" style="width: 100%; margin-bottom: 10px;">
+            <button class="btn" style="background: #7c3aed; color: white; padding: 10px; width: 100%; border: none; border-radius: 5px; cursor: pointer;" onclick="processUploadedPDF()">بدء التحليل والرفع</button>
+        `;
+        adminTab.insertBefore(div, adminTab.firstChild);
+    }
+}
+// تشغيل الأداة عند تحميل الصفحة
+window.addEventListener('load', setupPDFUpload);
+
     </script>
 </body>
 </html>
