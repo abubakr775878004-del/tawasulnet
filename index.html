@@ -3,35 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <title>TawasulNet</title>
-    <script src="features.js"></script>
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body>
 
-    <!-- الهيكل الكامل للكود كما أرسلته أنت -->
-    <div id="dist-tickets-list"></div>
-    <div id="admin-total-dists"></div>
-    <div id="admin-total-available-tickets"></div>
-    <select id="admin-charge-dist-select"></select>
-    <div id="admin-dists-list"></div>
-    <div id="admin-packages-injection-container"></div>
-    <input type="number" id="admin-charge-amount">
-    <input type="text" id="new-pkg-name">
-    <input type="text" id="new-pkg-price">
+<!-- ضع هنا محتوى الصفحة الأصلي (HTML) الذي تستخدمه -->
 
-    <script>
-        // دالة تحديث الواجهة (الجزء الثاني الذي أرسلته)
-        function updateUI() {
-            const distTicketsContainer = document.getElementById('dist-tickets-list');
+<script>
+    // --- الجزء الأول (مكتبة قراءة الملفات) ---
+    document.addEventListener('DOMContentLoaded', function() {
+        const container = document.getElementById('admin-pdf-containers');
+        if (!container) return;
+        container.innerHTML = `
+            <div style="padding: 15px; border: 1px dashed #ccc; margin-bottom: 15px;">
+                <input type="file" id="pdf-input" accept="application/pdf" style="margin-bottom: 10px;">
+                <select id="my-package-select" class="form-control" style="margin-bottom: 10px;">
+                    <option value="">اختر الباقة...</option>
+                </select>
+                <button class="btn btn-success" onclick="readPDF()" style="width: 100%;">القراءة من PDF</button>
+            </div>
+        `;
+        const originalSelect = document.getElementById('admin-direct-package-select');
+        if (originalSelect) {
+            document.getElementById('my-package-select').innerHTML = originalSelect.innerHTML;
+        }
+    });
+
+    function readPDF() {
+        const fileInput = document.getElementById('pdf-input');
+        if (fileInput.files.length === 0) { alert('يرجى اختيار ملف PDF'); return; }
+        const file = fileInput.files[0];
+        const url = URL.createObjectURL(file);
+        window.open(url, '_blank');
+        alert('سيتم فتح الملف في نافذة جديدة. قم بنسخ الكروت ولصقها في مربع الإدخال مباشرة');
+    }
+
+    // --- الجزء الثاني (تحديث الواجهة ولوحة الإدارة) ---
+    function updateUI() {
+        const distTicketsContainer = document.getElementById('dist-tickets-list');
+        if(distTicketsContainer) {
             distTicketsContainer.innerHTML = '';
-            
             [...soldTickets, ...remainingTickets].forEach(t => {
                 const pkg = packages.find(p => p.id === t.packageId) || { name: 'غير معروف' };
                 const isSold = t.distributorSaleStatus === 'تم البيع';
-                
                 distTicketsContainer.innerHTML += `
                     <div class="card" style="border-right: 5px solid ${isSold ? 'var(--success)' : 'var(--warning)'};">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -40,99 +53,79 @@
                                 <div style="font-family:monospace; font-size:1.2rem; color:var(--primary); margin:5px 0;">${t.code}</div>
                             </div>
                             ${isSold ? 
-                                `<button class="btn btn-danger" onclick="deleteSoldTicketByDistributor('${t.id}', '${t.code}', ${t.saleTimestamp})">حذف الكرت 🗑️</button>` 
+                                `<button class="btn btn-danger" style="padding:5px 10px; font-size:0.75rem;" onclick="deleteSoldTicketByDistributor('${t.id}', '${t.code}', ${t.saleTimestamp})">حذف الكرت 🗑️</button>` 
                                 : `<button class="btn btn-success" onclick="markTicketAsSold('${t.id}')">تم البيع للزبون ✅</button>`
                             }
                         </div>
                     </div>
                 `;
             });
+        }
 
-            // لوحة الإدارة
-            if (userRole === 'admin') {
-                document.getElementById('admin-total-dists').innerText = distributors.length;
-                document.getElementById('admin-total-available-tickets').innerText = tickets.filter(t => t.status === 'متوفر').length;
-
-                const distSelect = document.getElementById('admin-charge-dist-select');
+        if (userRole === 'admin') {
+            const adminTotalDists = document.getElementById('admin-total-dists');
+            if(adminTotalDists) adminTotalDists.innerText = distributors.length;
+            
+            const distSelect = document.getElementById('admin-charge-dist-select');
+            if(distSelect) {
                 distSelect.innerHTML = '<option value="">اختر موزعاً...</option>';
                 distributors.forEach(d => {
                     distSelect.innerHTML += `<option value="${d.id}">${d.name} (${d.balance} ريال)</option>`;
                 });
             }
         }
+    }
 
-        // دالة حقن الكروت (الجزء الثالث الذي أرسلته)
-        function injectTickets(packageId) {
-            const textarea = document.getElementById(`injection-area-${packageId}`);
-            const lines = textarea.value.split('\n');
-            let count = 0;
-            let updates = {};
+    // --- الجزء الثالث (دالة الحقن واللوحة الإدارية الموسعة) ---
+    function injectTickets(packageId) {
+        const textarea = document.getElementById(`injection-area-${packageId}`);
+        const lines = textarea.value.split('\n');
+        let count = 0;
+        let updates = {};
 
-            lines.forEach(line => {
-                const code = line.trim();
-                if (code.length > 5) {
-                    const newTicketRef = database.ref('tickets').push();
-                    updates[newTicketRef.key] = {
-                        code: code,
-                        packageId: packageId,
-                        status: 'متوفر',
-                        createdAt: firebase.database.ServerValue.TIMESTAMP
-                    };
-                    count++;
-                }
-            });
-
-            if (count > 0) {
-                database.ref().update(updates)
-                    .then(() => {
-                        showToast(`تم حقن ${count} كرت بنجاح!`);
-                        textarea.value = '';
-                    })
-                    .catch(err => showToast("خطأ: " + err.message));
-            }
-        }
-
-        // تحديث الحاوية
-        database.ref('packages').on('value', snapshot => {
-            const container = document.getElementById('admin-packages-injection-container');
-            if (container) {
-                container.innerHTML = '';
-                snapshot.forEach(child => {
-                    const p = child.val();
-                    container.innerHTML += `
-                        <div class="card">
-                            <label><strong>${p.name}</strong></label>
-                            <textarea id="injection-area-${child.key}" class="form-control" rows="3"></textarea>
-                            <button onclick="injectTickets('${child.key}')">حقن ${p.name}</button>
-                        </div>
-                    `;
-                });
+        lines.forEach(line => {
+            const code = line.trim();
+            if (code.length > 5) {
+                const newTicketRef = database.ref('tickets').push();
+                updates[newTicketRef.key] = {
+                    code: code,
+                    packageId: packageId,
+                    status: 'متوفر',
+                    createdAt: firebase.database.ServerValue.TIMESTAMP
+                };
+                count++;
             }
         });
 
-        // باقي الدوال (كما وردت في أجزائك)
-        function markTicketAsSold(ticketId) {
-            database.ref(`/tickets/${ticketId}`).update({
-                distributorSaleStatus: 'تم البيع',
-                saleTimestamp: firebase.database.ServerValue.TIMESTAMP
-            }).then(() => showToast("تم تسجيل البيع!"));
+        if (count > 0) {
+            database.ref().update(updates)
+                .then(() => {
+                    alert(`تم حقن ${count} كرت بنجاح!`);
+                    textarea.value = ''; 
+                })
+                .catch(err => alert("خطأ أثناء الحقن: " + err.message));
+        } else {
+            alert("لا توجد كروت صالحة للحقن.");
         }
+    }
 
-        function chargeDistributorBalance() {
-            const distId = document.getElementById('admin-charge-dist-select').value;
-            const amount = parseInt(document.getElementById('admin-charge-amount').value);
-            const dist = distributors.find(d => d.id === distId);
-            database.ref(`/distributors/${distId}`).update({
-                balance: (dist.balance || 0) + amount
-            }).then(() => showToast("تم شحن الرصيد!"));
+    database.ref('packages').on('value', snapshot => {
+        const container = document.getElementById('admin-packages-injection-container');
+        if (container) {
+            container.innerHTML = '';
+            snapshot.forEach(child => {
+                const p = child.val();
+                container.innerHTML += `
+                    <div class="card" style="margin-bottom:10px; background:#f1f5f9;">
+                        <label><strong>${p.name}</strong></label>
+                        <textarea id="injection-area-${child.key}" class="form-control" rows="3" placeholder="الصق الكروت هنا (كل كرت في سطر)"></textarea>
+                        <button class="btn btn-primary" style="margin-top:8px; width:100%;" onclick="injectTickets('${child.key}')">حقن ${p.name}</button>
+                    </div>
+                `;
+            });
         }
+    });
+</script>
 
-        function addNewPackage() {
-            const name = document.getElementById('new-pkg-name').value.trim();
-            const price = document.getElementById('new-pkg-price').value.trim();
-            database.ref('packages').push({ name, price })
-                .then(() => showToast("تمت الإضافة!"));
-        }
-    </script>
 </body>
 </html>
