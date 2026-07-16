@@ -1,107 +1,138 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
-<script src="features.js"></script>
-
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TawasulNet</title>
-    <!-- تضمين مكتبات Firebase الأساسية القديمة المتوافقة مع الكود -->
+    <script src="features.js"></script>
+    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <style>
-        :root {
-            --bg-body: #f4f7f6; 
-            --bg-gradient: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); 
-            --card-bg: #ffffff;
-            --card-border: #e2e8f0;
-            --primary: #1e40af; 
-            --primary-hover: #1d4ed8;
-            --secondary: #0f766e; 
-            --text-dark: #1e293b; 
-            --text-muted: #475569; 
-            --success: #059669; 
-            --danger: #be123c; 
-            --input-focus: #3b82f6;
-            --warning: #d97706;
+</head>
+<body>
+
+    <!-- الهيكل الكامل للكود كما أرسلته أنت -->
+    <div id="dist-tickets-list"></div>
+    <div id="admin-total-dists"></div>
+    <div id="admin-total-available-tickets"></div>
+    <select id="admin-charge-dist-select"></select>
+    <div id="admin-dists-list"></div>
+    <div id="admin-packages-injection-container"></div>
+    <input type="number" id="admin-charge-amount">
+    <input type="text" id="new-pkg-name">
+    <input type="text" id="new-pkg-price">
+
+    <script>
+        // دالة تحديث الواجهة (الجزء الثاني الذي أرسلته)
+        function updateUI() {
+            const distTicketsContainer = document.getElementById('dist-tickets-list');
+            distTicketsContainer.innerHTML = '';
+            
+            [...soldTickets, ...remainingTickets].forEach(t => {
+                const pkg = packages.find(p => p.id === t.packageId) || { name: 'غير معروف' };
+                const isSold = t.distributorSaleStatus === 'تم البيع';
+                
+                distTicketsContainer.innerHTML += `
+                    <div class="card" style="border-right: 5px solid ${isSold ? 'var(--success)' : 'var(--warning)'};">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div>
+                                <div style="font-weight:bold; font-size:1.1rem;">${pkg.name}</div>
+                                <div style="font-family:monospace; font-size:1.2rem; color:var(--primary); margin:5px 0;">${t.code}</div>
+                            </div>
+                            ${isSold ? 
+                                `<button class="btn btn-danger" onclick="deleteSoldTicketByDistributor('${t.id}', '${t.code}', ${t.saleTimestamp})">حذف الكرت 🗑️</button>` 
+                                : `<button class="btn btn-success" onclick="markTicketAsSold('${t.id}')">تم البيع للزبون ✅</button>`
+                            }
+                        </div>
+                    </div>
+                `;
+            });
+
+            // لوحة الإدارة
+            if (userRole === 'admin') {
+                document.getElementById('admin-total-dists').innerText = distributors.length;
+                document.getElementById('admin-total-available-tickets').innerText = tickets.filter(t => t.status === 'متوفر').length;
+
+                const distSelect = document.getElementById('admin-charge-dist-select');
+                distSelect.innerHTML = '<option value="">اختر موزعاً...</option>';
+                distributors.forEach(d => {
+                    distSelect.innerHTML += `<option value="${d.id}">${d.name} (${d.balance} ريال)</option>`;
+                });
+            }
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            -webkit-tap-highlight-color: transparent;
+        // دالة حقن الكروت (الجزء الثالث الذي أرسلته)
+        function injectTickets(packageId) {
+            const textarea = document.getElementById(`injection-area-${packageId}`);
+            const lines = textarea.value.split('\n');
+            let count = 0;
+            let updates = {};
+
+            lines.forEach(line => {
+                const code = line.trim();
+                if (code.length > 5) {
+                    const newTicketRef = database.ref('tickets').push();
+                    updates[newTicketRef.key] = {
+                        code: code,
+                        packageId: packageId,
+                        status: 'متوفر',
+                        createdAt: firebase.database.ServerValue.TIMESTAMP
+                    };
+                    count++;
+                }
+            });
+
+            if (count > 0) {
+                database.ref().update(updates)
+                    .then(() => {
+                        showToast(`تم حقن ${count} كرت بنجاح!`);
+                        textarea.value = '';
+                    })
+                    .catch(err => showToast("خطأ: " + err.message));
+            }
         }
 
-        body {
-            background-color: var(--bg-body);
-            color: var(--text-dark);
-            min-height: 100vh;
-            padding-bottom: 90px;
-            font-size: 15px;
+        // تحديث الحاوية
+        database.ref('packages').on('value', snapshot => {
+            const container = document.getElementById('admin-packages-injection-container');
+            if (container) {
+                container.innerHTML = '';
+                snapshot.forEach(child => {
+                    const p = child.val();
+                    container.innerHTML += `
+                        <div class="card">
+                            <label><strong>${p.name}</strong></label>
+                            <textarea id="injection-area-${child.key}" class="form-control" rows="3"></textarea>
+                            <button onclick="injectTickets('${child.key}')">حقن ${p.name}</button>
+                        </div>
+                    `;
+                });
+            }
+        });
+
+        // باقي الدوال (كما وردت في أجزائك)
+        function markTicketAsSold(ticketId) {
+            database.ref(`/tickets/${ticketId}`).update({
+                distributorSaleStatus: 'تم البيع',
+                saleTimestamp: firebase.database.ServerValue.TIMESTAMP
+            }).then(() => showToast("تم تسجيل البيع!"));
         }
 
-        header {
-            background: var(--bg-gradient);
-            padding: 20px;
-            text-align: center;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            box-shadow: 0 4px 15px rgba(30, 58, 138, 0.15);
-            color: white;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+        function chargeDistributorBalance() {
+            const distId = document.getElementById('admin-charge-dist-select').value;
+            const amount = parseInt(document.getElementById('admin-charge-amount').value);
+            const dist = distributors.find(d => d.id === distId);
+            database.ref(`/distributors/${distId}`).update({
+                balance: (dist.balance || 0) + amount
+            }).then(() => showToast("تم شحن الرصيد!"));
         }
 
-        header .brand-wrapper {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            width: 100%;
-            max-width: 600px;
+        function addNewPackage() {
+            const name = document.getElementById('new-pkg-name').value.trim();
+            const price = document.getElementById('new-pkg-price').value.trim();
+            database.ref('packages').push({ name, price })
+                .then(() => showToast("تمت الإضافة!"));
         }
-
-        header h1 {
-            font-size: 1.5rem;
-            font-weight: 800;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.15);
-        }
-
-        header p {
-            font-size: 0.85rem;
-            opacity: 0.9;
-            margin-top: 4px;
-        }
-
-        .user-pill {
-            background: rgba(255, 255, 255, 0.25);
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            max-width: 180px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            color: white;
-        }
-
-        .container {
-            max-width: 600px;
-            margin: 20px auto;
-            padding: 0 15px;
-        }
-
-        .card {
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 16px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
-        }
+    </script>
+</body>
+</html>
