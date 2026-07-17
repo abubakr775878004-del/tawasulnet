@@ -1,8 +1,7 @@
-// دالة معالجة الـ PDF
+// دالة القراءة المحدثة التي تنشئ الزر تلقائياً
 async function processPDF() {
     const fileInput = document.getElementById('pdf-file');
     const previewArea = document.getElementById('preview-area');
-    const selectedPackage = document.getElementById('target-package').value;
     
     if (!fileInput.files[0]) return alert("⚠️ يرجى اختيار ملف PDF!");
     
@@ -27,13 +26,17 @@ async function processPDF() {
             const uniqueCards = [...new Set(matches.filter(c => !c.startsWith("77")))];
 
             if (uniqueCards.length > 0) {
+                // هنا نقوم بإنشاء النص + الزر يدوياً داخل الـ preview-area
                 previewArea.innerHTML = `
                     <p style="color:green;">تم استخراج ${uniqueCards.length} كرت</p>
                     <textarea id="cards-result" style="width:100%; height:100px;">${uniqueCards.join("\n")}</textarea>
-                    <button id="save-btn-final" style="background:#28a745; color:white; width:100%; padding:10px; border:none; margin-top:10px;">حفظ الكروت في السيرفر</button>
+                    <button id="manual-save-btn" style="background:#28a745; color:white; width:100%; padding:15px; border:none; margin-top:10px; font-weight:bold; cursor:pointer;">اضغط هنا لحفظ الكروت</button>
                 `;
-                document.getElementById('save-btn-final').onclick = function() {
-                    saveToDatabase(selectedPackage);
+                
+                // ربط الزر الجديد بدالة الحفظ
+                document.getElementById('manual-save-btn').onclick = function() {
+                    const pkg = document.getElementById('target-package').value;
+                    saveToDatabase(pkg);
                 };
             } else {
                 previewArea.innerHTML = "<p style='color:red;'>لم يتم العثور على كروت!</p>";
@@ -45,38 +48,28 @@ async function processPDF() {
     reader.readAsArrayBuffer(fileInput.files[0]);
 }
 
-// دالة الحفظ الشاملة (تغطي كل الاحتمالات)
+// دالة الحفظ
 function saveToDatabase(pkg) {
     const cardsText = document.getElementById('cards-result').value;
     const cardsArray = cardsText.split('\n').filter(c => c.trim() !== "");
     
     if (cardsArray.length === 0) return;
     
-    // قائمة المسارات المحتملة في نظامك
-    const paths = ['cards/' + pkg, 'packages/' + pkg, 'plans/' + pkg, 'packets/' + pkg, 'cards', 'packages'];
-    
     try {
-        const dbInstance = (typeof db !== 'undefined' ? db : firebase.database());
+        // الحفظ في المجلد الرئيسي 'cards'
+        const dbRef = firebase.database().ref('cards');
         
         cardsArray.forEach(card => {
-            const cardData = {
+            dbRef.push({
                 code: card,
-                status: "available",
                 package: pkg,
+                status: "available",
                 createdAt: firebase.database.ServerValue.TIMESTAMP
-            };
-
-            paths.forEach(path => {
-                dbInstance.ref(path).push(cardData);
             });
         });
         
-        alert("✅ تم إرسال الكروت لجميع المسارات المحتملة. سيتم تحديث الصفحة...");
+        alert("✅ تم الحفظ بنجاح! راقب Firebase الآن.");
         document.getElementById('preview-area').innerHTML = "";
-        
-        // تحديث الصفحة لضمان ظهور الكروت في لوحة التحكم
-        setTimeout(() => { location.reload(); }, 2000);
-        
     } catch (error) {
         alert("❌ خطأ: " + error.message);
     }
