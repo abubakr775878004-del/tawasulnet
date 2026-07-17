@@ -3,19 +3,20 @@ function saveToDatabase(pkg) {
     const cardsArray = cardsText.split('\n').filter(c => c.trim() !== "");
     
     try {
-        // المسار الجديد: قد يكون اسم الباقة هو المجلد الرئيسي في Firebase
-        // مثال: إذا كانت الباقة "500"، المسار سيكون 'packages/500'
-        const dbRef = firebase.database().ref('packages/' + pkg);
+        // نستخدم المسار المباشر 'cards' فقط
+        // وغالباً ما يكون هذا هو المسار الذي يراقبه تطبيقك
+        const dbRef = firebase.database().ref('cards');
         
         cardsArray.forEach(card => {
             dbRef.push({
                 code: card,
+                package: pkg, // تخزين اسم الباقة داخل الكرت نفسه
                 status: "available",
                 createdAt: firebase.database.ServerValue.TIMESTAMP
             });
         });
         
-        showModernToast("✅ تم الحفظ في الباقة: " + pkg);
+        showModernToast("✅ تم إضافة الكروت بنجاح");
         document.getElementById('preview-area').innerHTML = "";
         
     } catch (error) {
