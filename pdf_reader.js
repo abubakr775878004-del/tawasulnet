@@ -31,7 +31,6 @@ async function processPDF() {
                     <textarea id="cards-result" style="width:100%; height:100px;">${uniqueCards.join("\n")}</textarea>
                     <button id="save-btn-final" style="background:#28a745; color:white; width:100%; padding:10px; border:none; margin-top:10px;">حفظ الكروت في السيرفر</button>
                 `;
-                
                 document.getElementById('save-btn-final').onclick = function() {
                     saveToDatabase(selectedPackage);
                 };
@@ -50,19 +49,22 @@ function saveToDatabase(pkg) {
     const cardsArray = cardsText.split('\n').filter(c => c.trim() !== "");
     
     try {
-        // نستخدم المسار 'cards' مباشرة لضمان وصول البيانات
-        const dbRef = firebase.database().ref('cards');
+        // اختبار التوصيل: إذا كان firebase غير معرف، سيظهر هذا الخطأ فوراً
+        if (typeof firebase === 'undefined') throw new Error("Firebase غير معرف");
+
+        // سنقوم بمحاولة حفظ البيانات في "المسار العام" لنتأكد هل المشكلة في "مسار الباقة" أم في "الربط"
+        const db = firebase.database();
         
         cardsArray.forEach(card => {
-            dbRef.push({
+            // سنحفظ في مسار 'cards' مباشرة بدون تعقيدات الباقة لنختبر هل تصل البيانات أم لا
+            db.ref('cards').push({
                 code: card,
-                package: pkg, // هذا سيحفظ اسم الباقة بجانب الكرت
-                status: "available",
+                targetPackage: pkg, 
                 createdAt: firebase.database.ServerValue.TIMESTAMP
             });
         });
         
-        showModernToast("✅ اكتمل الحفظ بنجاح");
+        showModernToast("✅ تم الإرسال إلى السيرفر!");
         document.getElementById('preview-area').innerHTML = "";
         
     } catch (error) {
@@ -70,7 +72,6 @@ function saveToDatabase(pkg) {
     }
 }
 
-// دالة الإشعار العصري (Toast)
 function showModernToast(message) {
     const toast = document.createElement('div');
     toast.innerText = message;
@@ -84,7 +85,6 @@ function showModernToast(message) {
     toast.style.borderRadius = '20px';
     toast.style.zIndex = '9999';
     toast.style.fontSize = '14px';
-    toast.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
     document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 2000);
+    setTimeout(() => toast.remove(), 2500);
 }
