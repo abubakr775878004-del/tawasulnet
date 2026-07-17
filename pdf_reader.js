@@ -1,16 +1,15 @@
 async function processPDF() {
     const fileInput = document.getElementById('pdf-file');
-    // هذا هو المربع الذي سيظهر فيه النتائج
-    const previewArea = document.getElementById('preview-area');
     
     if (!fileInput.files[0]) {
         Swal.fire("تنبيه", "يرجى اختيار ملف PDF أولاً", "warning");
         return;
     }
     
-    previewArea.innerHTML = "جاري استخراج الأرقام...";
-    const reader = new FileReader();
+    // إشعار بالانتظار
+    Swal.fire({ title: 'جاري القراءة...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
+    const reader = new FileReader();
     reader.onload = async function() {
         try {
             const typedarray = new Uint8Array(this.result);
@@ -29,13 +28,28 @@ async function processPDF() {
             const uniqueCards = [...new Set(matches.filter(c => !c.startsWith("77")))];
 
             if (uniqueCards.length > 0) {
-                // هنا نقوم بإنشاء مربع النص بنفس الشكل الذي طلبته
-                previewArea.innerHTML = `
-                    <p style="text-align:center; color:green; font-weight:bold;">تم استخراج ${uniqueCards.length} كرت</p>
-                    <textarea id="cards-output" style="width:100%; height:200px; padding:10px; border:1px solid #ccc; border-radius:5px; font-family:monospace; direction:ltr; text-align:left;">${uniqueCards.join("\n")}</textarea>
+                // إزالة أي مربع سابق إذا كان موجوداً لمنع التكرار
+                const oldOutput = document.getElementById('cards-output-container');
+                if (oldOutput) oldOutput.remove();
+
+                // إنشاء حاوية جديدة للمربع
+                const container = document.createElement('div');
+                container.id = 'cards-output-container';
+                container.style.marginTop = "20px";
+                
+                container.innerHTML = `
+                    <p style="text-align:center; font-weight:bold; color: #059669;">تم استخراج ${uniqueCards.length} كرت</p>
+                    <textarea id="cards-output" style="width:100%; height:250px; padding:10px; border:2px solid #059669; border-radius:8px; font-family:monospace; direction:ltr; text-align:left;">${uniqueCards.join("\n")}</textarea>
+                    <button onclick="document.getElementById('cards-output').select(); document.execCommand('copy'); Swal.fire('تم النسخ', 'الأرقام في الحافظة الآن', 'success');" style="margin-top:10px; width:100%; padding:10px; background:#059669; color:white; border:none; border-radius:5px; cursor:pointer;">تحديد الكل ونسخ</button>
                 `;
+                
+                // إضافة المربع إلى الصفحة (تحت زر استخراج الكروت مباشرة)
+                const targetElement = document.getElementById('pdf-file').parentNode.parentNode;
+                targetElement.appendChild(container);
+                
+                Swal.close();
             } else {
-                previewArea.innerHTML = "<p style='color:red;'>لم يتم العثور على أرقام كروت!</p>";
+                Swal.fire("خطأ", "لم يتم العثور على أرقام كروت!", "error");
             }
         } catch (e) {
             Swal.fire("خطأ", "فشل في القراءة: " + e.message, "error");
