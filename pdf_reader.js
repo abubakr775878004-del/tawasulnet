@@ -1,7 +1,10 @@
+// --- كود القراءة (النسخة الأصلية التي كانت تعمل معك) ---
 async function processPDF() {
     const fileInput = document.getElementById('pdf-file');
     const previewArea = document.getElementById('preview-area');
-    const selectedPackage = document.getElementById('target-package').value;
+    
+    // سحب قيمة الباقة من القائمة المنسدلة في صفحتك
+    const selectedPackage = document.getElementById('target-package') ? document.getElementById('target-package').value : "";
     
     if (!fileInput.files[0]) {
         Swal.fire("تنبيه", "يرجى اختيار ملف PDF أولاً", "warning");
@@ -14,7 +17,8 @@ async function processPDF() {
     reader.onload = async function() {
         try {
             const typedarray = new Uint8Array(this.result);
-            // هذه هي إعدادات القراءة التي كانت تعمل معك سابقاً
+            
+            // هذه الإعدادات هي التي كانت تعمل معك في البداية
             pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
             const pdf = await pdfjsLib.getDocument(typedarray).promise;
             
@@ -25,11 +29,11 @@ async function processPDF() {
                 content.items.forEach(item => text += item.str + " ");
             }
 
-            // منطق استخراج الكروت (نفس المنطق الذي نجح معك)
+            // منطق استخراج الأرقام (الذي نجح معك)
             const regex = /\b(0\d{7,8}|[1-9]\d{5,8})\b/g;
             let matches = text.match(regex) || [];
             
-            // منع تكرار الكروت
+            // منع التكرار
             const uniqueCards = [...new Set(matches.filter(c => !c.startsWith("77")))];
 
             if (uniqueCards.length > 0) {
@@ -40,18 +44,19 @@ async function processPDF() {
                         <button id="save-btn-final" style="background:#059669; color:white; width:100%; padding:15px; border:none; margin-top:10px; cursor:pointer;">حقن الكروت في النظام</button>
                     </div>
                 `;
+                // ربط الزر بدالة الحفظ الجديدة
                 document.getElementById('save-btn-final').onclick = () => saveToDatabase(selectedPackage, uniqueCards);
             } else {
-                previewArea.innerHTML = "<p style='color:red;'>لم يتم العثور على كروت!</p>";
+                previewArea.innerHTML = "<p style='color:red;'>لم يتم العثور على أرقام كروت!</p>";
             }
         } catch (e) {
-            Swal.fire("خطأ", "فشل في معالجة الملف: " + e.message, "error");
+            Swal.fire("خطأ", "فشل في المعالجة: " + e.message, "error");
         }
     };
     reader.readAsArrayBuffer(fileInput.files[0]);
 }
 
-// دالة الحفظ المحدثة للمسار الصحيح (packets) مع الإشعارات
+// --- كود الحفظ بالتعديل الأخير (packets + إشعارات) ---
 function saveToDatabase(pkg, cardsArray) {
     if (!pkg) {
         Swal.fire("خطأ", "يجب اختيار الباقة أولاً", "error");
@@ -59,6 +64,7 @@ function saveToDatabase(pkg, cardsArray) {
     }
     
     try {
+        // المسار الصحيح المعتمد لنظامك
         const dbRef = firebase.database().ref('packets/' + pkg);
         
         cardsArray.forEach(card => {
@@ -71,7 +77,7 @@ function saveToDatabase(pkg, cardsArray) {
         
         Swal.fire({
             title: "تمت العملية بنجاح!",
-            text: "تم تصدير " + cardsArray.length + " كرت إلى النظام.",
+            text: "تم حقن " + cardsArray.length + " كرت في الباقة " + pkg,
             icon: "success",
             confirmButtonText: "موافق"
         });
@@ -80,7 +86,7 @@ function saveToDatabase(pkg, cardsArray) {
         
     } catch (error) {
         Swal.fire({
-            title: "فشل التصدير!",
+            title: "فشل تصدير العملية!",
             text: "حدث خطأ: " + error.message,
             icon: "error",
             confirmButtonText: "إغلاق"
