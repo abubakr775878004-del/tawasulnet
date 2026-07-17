@@ -1,7 +1,8 @@
-// --- دالة القراءة الأصلية التي قرأت الـ 40 كرت بنجاح ---
+// دالة القراءة المحدثة لدعم الحقن المباشر في الباقة المختارة
 async function processPDF() {
     const fileInput = document.getElementById('pdf-file');
     const previewArea = document.getElementById('preview-area');
+    // القيمة هنا يجب أن تكون معرف الباقة (مثل 200 أو 300)
     const selectedPackage = document.getElementById('target-package').value;
     
     if (!fileInput.files[0]) {
@@ -15,7 +16,6 @@ async function processPDF() {
     reader.onload = async function() {
         try {
             const typedarray = new Uint8Array(this.result);
-            // هذه الإعدادات هي التي جعلت القراءة تنجح معك سابقاً
             pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
             const pdf = await pdfjsLib.getDocument(typedarray).promise;
             
@@ -26,19 +26,16 @@ async function processPDF() {
                 content.items.forEach(item => text += item.str + " ");
             }
 
-            // منطق الاستخراج الأساسي
             const regex = /\b(0\d{7,8}|[1-9]\d{5,8})\b/g;
             let matches = text.match(regex) || [];
-            
-            // منع تكرار الكروت
             const uniqueCards = [...new Set(matches.filter(c => !c.startsWith("77")))];
 
             if (uniqueCards.length > 0) {
-                // عرض الكروت في الـ textarea كما في صورتك
                 previewArea.innerHTML = `
-                    <p style="color:green; font-weight:bold;">تم استخراج ${uniqueCards.length} كرت</p>
-                    <textarea id="cards-result" style="width:100%; height:150px;">${uniqueCards.join("\n")}</textarea>
-                    <button id="save-btn-final" style="background:#28a745; color:white; width:100%; padding:15px; border:none; margin-top:10px; cursor:pointer;">حقن الكروت في النظام</button>
+                    <div style="text-align: center; margin-top:10px;">
+                        <p style="color:green; font-weight:bold;">تم استخراج ${uniqueCards.length} كرت</p>
+                        <button id="save-btn-final" style="background:#059669; color:white; width:100%; padding:15px; border:none; border-radius:8px; cursor:pointer;">حقن الكروت في باقة ${selectedPackage}</button>
+                    </div>
                 `;
                 document.getElementById('save-btn-final').onclick = () => saveToDatabase(selectedPackage, uniqueCards);
             } else {
@@ -51,15 +48,15 @@ async function processPDF() {
     reader.readAsArrayBuffer(fileInput.files[0]);
 }
 
-// --- دالة الحفظ مع الإشعارات العصرية ---
+// دالة الحقن في مسار الباقة المحدد
 function saveToDatabase(pkg, cardsArray) {
     if (!pkg) {
-        Swal.fire("خطأ", "يرجى اختيار الباقة أولاً", "error");
+        Swal.fire("خطأ", "يجب اختيار الباقة أولاً", "error");
         return;
     }
     
     try {
-        // المسار المعتمد لنظامك
+        // المسار الدقيق كما يظهر في نظامك للباقات (packets/200 أو packets/300)
         const dbRef = firebase.database().ref('packets/' + pkg);
         
         cardsArray.forEach(card => {
@@ -72,7 +69,7 @@ function saveToDatabase(pkg, cardsArray) {
         
         Swal.fire({
             title: "تمت العملية بنجاح!",
-            text: "تم حقن " + cardsArray.length + " كرت في الباقة.",
+            text: "تم حقن " + cardsArray.length + " كرت في الباقة المختارة.",
             icon: "success",
             confirmButtonText: "موافق"
         });
@@ -81,7 +78,7 @@ function saveToDatabase(pkg, cardsArray) {
         
     } catch (error) {
         Swal.fire({
-            title: "فشل التصدير!",
+            title: "فشل تصدير العملية!",
             text: "حدث خطأ: " + error.message,
             icon: "error",
             confirmButtonText: "إغلاق"
