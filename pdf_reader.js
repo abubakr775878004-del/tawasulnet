@@ -51,13 +51,11 @@ function saveToDatabase(pkg) {
     const cardsArray = cardsText.split('\n').filter(c => c.trim() !== "");
     
     try {
-        // التحقق من تعريف database
-        if (typeof database === 'undefined') {
-            throw new Error("قاعدة البيانات غير متصلة (Database not defined)");
-        }
-
+        // نستخدم firebase.database() مباشرة لضمان الاتصال الصحيح
+        const dbRef = firebase.database().ref('cards');
+        
         cardsArray.forEach(card => {
-            database.ref('cards').push({
+            dbRef.push({
                 code: card,
                 package: pkg,
                 status: "available",
@@ -65,11 +63,13 @@ function saveToDatabase(pkg) {
             });
         });
         
-        // شعار التأكيد
-        alert("✅ اكتمل الحفظ بنجاح!");
+        // إشعار التأكيد الذي طلبته
+        alert("✅ اكتمل الحفظ بنجاح! تم إضافة " + cardsArray.length + " كرت.");
         document.getElementById('preview-area').innerHTML = "";
         
     } catch (error) {
+        // إظهار الخطأ إذا فشل الحفظ
         alert("❌ فشل الحفظ: " + error.message);
+        console.error("خطأ تفصيلي:", error);
     }
 }
