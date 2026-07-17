@@ -21,12 +21,9 @@ async function processPDF() {
                 content.items.forEach(item => text += item.str + " ");
             }
 
-            // هذا هو النمط الذي كان يعمل ويستخرج الأرقام التي تبدأ بصفر أو أرقام عادية
-            // مع إضافة شرط منع الأرقام التي تبدأ بـ 77 (أرقام الجوال)
             const regex = /\b(0\d{7,8}|[1-9]\d{5,8})\b/g;
             const matches = text.match(regex) || [];
             
-            // تصفية النتائج: استبعاد أي رقم يبدأ بـ 77، والحصول على قيم فريدة فقط
             const uniqueCards = [...new Set(matches.filter(c => !c.startsWith("77")))];
 
             if (uniqueCards.length > 0) {
@@ -43,4 +40,24 @@ async function processPDF() {
         }
     };
     reader.readAsArrayBuffer(fileInput.files[0]);
+}
+
+function saveToDatabase(pkg) {
+    const cardsText = document.getElementById('cards-result').value;
+    if (!cardsText) return alert("لا توجد كروت للحفظ!");
+    
+    const cardsArray = cardsText.split('\n').filter(c => c.trim() !== "");
+    
+    // إضافة الكروت إلى مسار 'cards' في قاعدة البيانات
+    cardsArray.forEach(card => {
+        database.ref('cards').push({
+            code: card,
+            package: pkg,
+            status: "available",
+            createdAt: firebase.database.ServerValue.TIMESTAMP
+        });
+    });
+    
+    alert("تم حفظ " + cardsArray.length + " كرت بنجاح في باقة " + pkg);
+    document.getElementById('preview-area').innerHTML = "";
 }
