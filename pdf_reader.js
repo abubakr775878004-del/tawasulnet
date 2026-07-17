@@ -1,4 +1,3 @@
-// دالة معالجة الـ PDF الكاملة
 async function processPDF() {
     const fileInput = document.getElementById('pdf-file');
     const previewArea = document.getElementById('preview-area');
@@ -15,6 +14,7 @@ async function processPDF() {
     reader.onload = async function() {
         try {
             const typedarray = new Uint8Array(this.result);
+            // هذه هي إعدادات القراءة التي كانت تعمل معك سابقاً
             pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
             const pdf = await pdfjsLib.getDocument(typedarray).promise;
             
@@ -25,23 +25,24 @@ async function processPDF() {
                 content.items.forEach(item => text += item.str + " ");
             }
 
+            // منطق استخراج الكروت (نفس المنطق الذي نجح معك)
             const regex = /\b(0\d{7,8}|[1-9]\d{5,8})\b/g;
             let matches = text.match(regex) || [];
             
-            // فلترة التكرار (منع تكرار الكروت)
+            // منع تكرار الكروت
             const uniqueCards = [...new Set(matches.filter(c => !c.startsWith("77")))];
 
             if (uniqueCards.length > 0) {
                 previewArea.innerHTML = `
                     <div style="text-align: center;">
-                        <p style="color:green; font-weight:bold;">تم العثور على ${uniqueCards.length} كرت (بعد إزالة المكرر)</p>
-                        <textarea id="cards-result" style="width:100%; height:100px; border-radius:8px; padding:10px;">${uniqueCards.join("\n")}</textarea>
-                        <button id="save-btn-final" style="background:#059669; color:white; width:100%; padding:15px; border:none; margin-top:15px; border-radius:8px; cursor:pointer; font-size:16px;">حقن الكروت في النظام</button>
+                        <p style="color:green; font-weight:bold;">تم استخراج ${uniqueCards.length} كرت</p>
+                        <textarea id="cards-result" style="width:100%; height:100px;">${uniqueCards.join("\n")}</textarea>
+                        <button id="save-btn-final" style="background:#059669; color:white; width:100%; padding:15px; border:none; margin-top:10px; cursor:pointer;">حقن الكروت في النظام</button>
                     </div>
                 `;
                 document.getElementById('save-btn-final').onclick = () => saveToDatabase(selectedPackage, uniqueCards);
             } else {
-                previewArea.innerHTML = "<p style='color:red;'>لم يتم العثور على أي كروت صالحة!</p>";
+                previewArea.innerHTML = "<p style='color:red;'>لم يتم العثور على كروت!</p>";
             }
         } catch (e) {
             Swal.fire("خطأ", "فشل في معالجة الملف: " + e.message, "error");
@@ -50,7 +51,7 @@ async function processPDF() {
     reader.readAsArrayBuffer(fileInput.files[0]);
 }
 
-// دالة الحفظ المحدثة مع الإشعارات العصرية
+// دالة الحفظ المحدثة للمسار الصحيح (packets) مع الإشعارات
 function saveToDatabase(pkg, cardsArray) {
     if (!pkg) {
         Swal.fire("خطأ", "يجب اختيار الباقة أولاً", "error");
@@ -58,7 +59,6 @@ function saveToDatabase(pkg, cardsArray) {
     }
     
     try {
-        // المسار المكتشف من نظامك (packets)
         const dbRef = firebase.database().ref('packets/' + pkg);
         
         cardsArray.forEach(card => {
@@ -69,10 +69,9 @@ function saveToDatabase(pkg, cardsArray) {
             });
         });
         
-        // إشعار نجاح جذاب
         Swal.fire({
             title: "تمت العملية بنجاح!",
-            text: "تم حقن " + cardsArray.length + " كرت في النظام.",
+            text: "تم تصدير " + cardsArray.length + " كرت إلى النظام.",
             icon: "success",
             confirmButtonText: "موافق"
         });
@@ -80,12 +79,11 @@ function saveToDatabase(pkg, cardsArray) {
         document.getElementById('preview-area').innerHTML = "";
         
     } catch (error) {
-        // إشعار فشل جذاب
         Swal.fire({
-            title: "فشل تصدير الكروت!",
-            text: "حدث خطأ أثناء الاتصال بالسيرفر: " + error.message,
+            title: "فشل التصدير!",
+            text: "حدث خطأ: " + error.message,
             icon: "error",
-            confirmButtonText: "حاول مجدداً"
+            confirmButtonText: "إغلاق"
         });
     }
 }
