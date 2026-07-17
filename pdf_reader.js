@@ -1,20 +1,16 @@
-// --- الكود الكامل لملف pdf_reader.js ---
-
-// دالة قراءة الـ PDF (التي أثبتت نجاحها في قراءة الكروت)
+// الكود النهائي الشامل للحقن المزدوج
 async function processPDF() {
     const fileInput = document.getElementById('pdf-file');
     const previewArea = document.getElementById('preview-area');
     const packageSelect = document.getElementById('target-package');
+    const selectedText = packageSelect.options[packageSelect.selectedIndex].text;
+    const packageId = selectedText.match(/\d+/)[0]; 
     
     if (!fileInput.files[0]) {
         Swal.fire("تنبيه", "يرجى اختيار ملف PDF أولاً", "warning");
         return;
     }
     
-    // الحصول على نص الباقة واستخراج الرقم منها بدقة
-    const selectedText = packageSelect.options[packageSelect.selectedIndex].text;
-    const packageId = selectedText.match(/\d+/)[0]; 
-
     previewArea.innerHTML = "جاري المعالجة...";
     const reader = new FileReader();
 
@@ -39,56 +35,48 @@ async function processPDF() {
                 previewArea.innerHTML = `
                     <div style="text-align: center; margin-top:10px;">
                         <p style="color:green; font-weight:bold;">تم استخراج ${uniqueCards.length} كرت</p>
-                        <button id="save-btn-final" style="background:#059669; color:white; width:100%; padding:15px; border:none; border-radius:8px; cursor:pointer;">حقن الكروت في الباقة ${packageId}</button>
+                        <button id="save-btn-final" style="background:#059669; color:white; width:100%; padding:15px; border:none; border-radius:8px; cursor:pointer;">إرسال الكروت وتحديث المخزون</button>
                     </div>
                 `;
-                document.getElementById('save-btn-final').onclick = () => saveToDatabase(packageId, uniqueCards);
+                document.getElementById('save-btn-final').onclick = () => injectCards(packageId, uniqueCards);
             } else {
-                previewArea.innerHTML = "<p style='color:red;'>لم يتم العثور على أرقام كروت صالحة!</p>";
+                previewArea.innerHTML = "<p style='color:red;'>لم يتم العثور على أرقام!</p>";
             }
         } catch (e) {
-            Swal.fire("خطأ", "فشل في المعالجة: " + e.message, "error");
+            Swal.fire("خطأ", "فشل: " + e.message, "error");
         }
     };
     reader.readAsArrayBuffer(fileInput.files[0]);
 }
 
-// دالة الحفظ المحدثة (الحقن + محاولة تحديث العداد)
-function saveToDatabase(packageId, cardsArray) {
-    try {
-        const db = firebase.database();
-        const cardsRef = db.ref('packets/' + packageId);
-        
-        // 1. إضافة الكروت للمخزون
-        cardsArray.forEach(card => {
-            cardsRef.push({
-                code: card,
-                status: "available",
-                createdAt: firebase.database.ServerValue.TIMESTAMP
-            });
-        });
+// دالة الحقن المزدوج
+function injectCards(packageId, cardsArray) {
+    const db = firebase.database();
+    
+    // 1. الحقن في المسار الذي جربناه (packets)
+    const cardsRef = db.ref('packets/' + packageId);
+    
+    // 2. تحديث المسار الذي يحتمل أنه العداد (tariffs هو الشائع في هذه الأنظمة)
+    const counterRef = db.ref('tariffs/' + packageId + '/stock');
 
-        // 2. تحديث العداد (محاولة تحديث المسار المباشر)
-        // إذا كان نظامك يستخدم مساراً مختلفاً للعداد، قد تحتاج لتعديل كلمة 'count'
-        const countRef = db.ref('package_counts/' + packageId);
-        countRef.transaction((current) => {
-            return (current || 0) + cardsArray.length;
+    cardsArray.forEach(card => {
+        cardsRef.push({
+            code: card,
+            status: "available",
+            createdAt: firebase.database.ServerValue.TIMESTAMP
         });
+    });
 
+    counterRef.transaction((current) => {
+        return (current || 0) + cardsArray.length;
+    }).then(() => {
         Swal.fire({
-            title: "تمت العملية بنجاح!",
-            text: "تمت إضافة " + cardsArray.length + " كرت للباقة " + packageId,
-            icon: "success",
-            confirmButtonText: "موافق"
+            title: "تم الحقن بنجاح!",
+            text: "تمت إضافة الكروت وتحديث العداد في السحابة.",
+            icon: "success"
         });
-        
         document.getElementById('preview-area').innerHTML = "";
-        
-    } catch (error) {
-        Swal.fire({
-            title: "فشل!",
-            text: "خطأ أثناء الحقن: " + error.message,
-            icon: "error"
-        });
-    }
+    }).catch((err) => {
+        Swal.fire("خطأ في الاتصال", "تعذر تحديث العداد: " + err.message, "error");
+    });
 }
