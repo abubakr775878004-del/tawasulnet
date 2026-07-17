@@ -11,7 +11,6 @@ async function processPDF() {
     reader.onload = async function() {
         try {
             const typedarray = new Uint8Array(this.result);
-            // تأكد من تحديث رابط المكتبة إذا لزم الأمر
             pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
             const pdf = await pdfjsLib.getDocument(typedarray).promise;
             
@@ -22,9 +21,12 @@ async function processPDF() {
                 content.items.forEach(item => text += item.str + " ");
             }
 
-            // نمط البحث المعتمد: يبحث عن كروت بحرف أو بدون، مع تجاهل أرقام الجوال (77)
-            const rawCards = text.match(/\b([a-zA-Z]?\d{6,8}|0\d{7,8})\b/g) || [];
-            const uniqueCards = [...new Set(rawCards)].filter(c => !c.startsWith("77"));
+            // النمط الجديد: 
+            // 1. يبحث عن أرقام بطول 5 إلى 9 خانات (\d{5,9})
+            // 2. يطبق شرط الاستثناء: لا يقبل أي رقم طوله 9 خانات ويبدأ بـ 77
+            const regex = /\b(?!(77\d{7})\b)(\d{5,9})\b/g;
+            const rawCards = text.match(regex) || [];
+            const uniqueCards = [...new Set(rawCards)];
 
             if (uniqueCards.length > 0) {
                 previewArea.innerHTML = `
@@ -40,10 +42,4 @@ async function processPDF() {
         }
     };
     reader.readAsArrayBuffer(fileInput.files[0]);
-}
-
-function saveToDatabase(pkg) {
-    const cards = document.getElementById('cards-result').value.split('\n');
-    alert("جاري إرسال " + cards.length + " كرت للباقة " + pkg + " إلى قاعدة البيانات...");
-    // هنا تضع كود الإرسال الخاص بك لـ Firebase
 }
