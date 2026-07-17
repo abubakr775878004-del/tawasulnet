@@ -1,4 +1,4 @@
-// دالة معالجة الـ PDF الكاملة
+// دالة معالجة الـ PDF
 async function processPDF() {
     const fileInput = document.getElementById('pdf-file');
     const previewArea = document.getElementById('preview-area');
@@ -39,39 +39,45 @@ async function processPDF() {
                 previewArea.innerHTML = "<p style='color:red;'>لم يتم العثور على كروت!</p>";
             }
         } catch (e) {
-            previewArea.innerHTML = "خطأ: " + e.message;
+            previewArea.innerHTML = "خطأ في المعالجة: " + e.message;
         }
     };
     reader.readAsArrayBuffer(fileInput.files[0]);
 }
 
-// دالة الحفظ المدمجة مع النظام (استخدام المتغير db المعتمد في نظامك)
+// دالة الحفظ الشاملة (تغطي كل الاحتمالات)
 function saveToDatabase(pkg) {
     const cardsText = document.getElementById('cards-result').value;
     const cardsArray = cardsText.split('\n').filter(c => c.trim() !== "");
     
     if (cardsArray.length === 0) return;
     
+    // قائمة المسارات المحتملة في نظامك
+    const paths = ['cards/' + pkg, 'packages/' + pkg, 'plans/' + pkg, 'packets/' + pkg, 'cards', 'packages'];
+    
     try {
-        // نستخدم المتغير db إذا كان معرفاً في نظامك، وإلا نستخدم firebase.database()
-        const dbRef = (typeof db !== 'undefined' ? db : firebase.database()).ref('packages/' + pkg);
+        const dbInstance = (typeof db !== 'undefined' ? db : firebase.database());
         
         cardsArray.forEach(card => {
-            dbRef.push({
+            const cardData = {
                 code: card,
                 status: "available",
+                package: pkg,
                 createdAt: firebase.database.ServerValue.TIMESTAMP
+            };
+
+            paths.forEach(path => {
+                dbInstance.ref(path).push(cardData);
             });
         });
         
-        alert("✅ تم رفع " + cardsArray.length + " كرت إلى الباقة بنجاح!");
+        alert("✅ تم إرسال الكروت لجميع المسارات المحتملة. سيتم تحديث الصفحة...");
         document.getElementById('preview-area').innerHTML = "";
         
-        // إعادة تحميل الصفحة لضمان ظهور الكروت الجديدة في قائمة النظام
-        setTimeout(() => { location.reload(); }, 1500);
+        // تحديث الصفحة لضمان ظهور الكروت في لوحة التحكم
+        setTimeout(() => { location.reload(); }, 2000);
         
     } catch (error) {
-        alert("❌ خطأ أثناء الحفظ: " + error.message);
-        console.error("خطأ الربط:", error);
+        alert("❌ خطأ: " + error.message);
     }
 }
