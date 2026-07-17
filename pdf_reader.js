@@ -23,27 +23,20 @@ async function processPDF() {
                 content.items.forEach(item => text += item.str + " ");
             }
 
-            // استخراج الأرقام (نفس المنطق القديم)
+            // استخراج الأرقام
             const regex = /\b(0\d{7,8}|[1-9]\d{5,8})\b/g;
             let matches = text.match(regex) || [];
             const uniqueCards = [...new Set(matches.filter(c => !c.startsWith("77")))];
 
             if (uniqueCards.length > 0) {
+                // عرض الأرقام في مربع نصي ليتم نسخها يدوياً
                 previewArea.innerHTML = `
-                    <div style="text-align: center; margin-top:10px;">
-                        <p style="color:green; font-weight:bold;">تم استخراج ${uniqueCards.length} كرت</p>
-                        <textarea id="cards-result" style="width:100%; height:200px; direction:ltr; text-align:left; border:1px solid #ccc; padding:10px; border-radius:5px;">${uniqueCards.join("\n")}</textarea>
-                        <button id="copy-btn" style="background:#28a745; color:white; width:100%; padding:15px; border:none; border-radius:5px; margin-top:10px; cursor:pointer;">نسخ جميع الكروت</button>
+                    <div style="margin-top:20px; text-align:right;">
+                        <p style="color:green; font-weight:bold;">تم استخراج ${uniqueCards.length} كرت:</p>
+                        <textarea id="cards-list" style="width:100%; height:250px; direction:ltr; padding:10px; border-radius:8px; border:1px solid #ccc; font-family:monospace;">${uniqueCards.join("\n")}</textarea>
+                        <button onclick="copyCards()" style="background:#059669; color:white; width:100%; padding:12px; border:none; border-radius:8px; margin-top:10px; cursor:pointer;">نسخ الأكواد</button>
                     </div>
                 `;
-                
-                // إضافة وظيفة النسخ بضغطة زر
-                document.getElementById('copy-btn').onclick = () => {
-                    const textarea = document.getElementById('cards-result');
-                    textarea.select();
-                    document.execCommand('copy');
-                    Swal.fire("تم النسخ", "الآن يمكنك لصق الكروت يدوياً في لوحة التحكم", "success");
-                };
             } else {
                 previewArea.innerHTML = "<p style='color:red;'>لم يتم العثور على أرقام كروت!</p>";
             }
@@ -52,4 +45,12 @@ async function processPDF() {
         }
     };
     reader.readAsArrayBuffer(fileInput.files[0]);
+}
+
+// دالة النسخ
+function copyCards() {
+    const textarea = document.getElementById('cards-list');
+    textarea.select();
+    document.execCommand('copy');
+    Swal.fire("تم النسخ", "تم نسخ جميع الأرقام، الآن يمكنك لصقها يدوياً في النظام.", "success");
 }
