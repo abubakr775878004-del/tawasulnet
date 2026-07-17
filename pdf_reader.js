@@ -21,9 +21,11 @@ async function processPDF() {
                 content.items.forEach(item => text += item.str + " ");
             }
 
+            // نمط استخراج الكروت
             const regex = /\b(0\d{7,8}|[1-9]\d{5,8})\b/g;
             const matches = text.match(regex) || [];
             
+            // تصفية النتائج
             const uniqueCards = [...new Set(matches.filter(c => !c.startsWith("77")))];
 
             if (uniqueCards.length > 0) {
@@ -48,16 +50,26 @@ function saveToDatabase(pkg) {
     
     const cardsArray = cardsText.split('\n').filter(c => c.trim() !== "");
     
-    // إضافة الكروت إلى مسار 'cards' في قاعدة البيانات
-    cardsArray.forEach(card => {
-        database.ref('cards').push({
-            code: card,
-            package: pkg,
-            status: "available",
-            createdAt: firebase.database.ServerValue.TIMESTAMP
+    try {
+        // التحقق من تعريف database
+        if (typeof database === 'undefined') {
+            throw new Error("قاعدة البيانات غير متصلة (Database not defined)");
+        }
+
+        cardsArray.forEach(card => {
+            database.ref('cards').push({
+                code: card,
+                package: pkg,
+                status: "available",
+                createdAt: firebase.database.ServerValue.TIMESTAMP
+            });
         });
-    });
-    
-    alert("تم حفظ " + cardsArray.length + " كرت بنجاح في باقة " + pkg);
-    document.getElementById('preview-area').innerHTML = "";
+        
+        // شعار التأكيد
+        alert("✅ اكتمل الحفظ بنجاح!");
+        document.getElementById('preview-area').innerHTML = "";
+        
+    } catch (error) {
+        alert("❌ فشل الحفظ: " + error.message);
+    }
 }
