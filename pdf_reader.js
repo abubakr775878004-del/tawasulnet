@@ -32,7 +32,6 @@ async function processPDF() {
                     <button id="save-btn-final" style="background:#28a745; color:white; width:100%; padding:10px; border:none; margin-top:10px;">حفظ الكروت في السيرفر</button>
                 `;
                 
-                // ربط الزر مباشرة بعد ظهوره
                 document.getElementById('save-btn-final').onclick = function() {
                     saveToDatabase(selectedPackage);
                 };
@@ -48,32 +47,45 @@ async function processPDF() {
 
 function saveToDatabase(pkg) {
     const cardsText = document.getElementById('cards-result').value;
-    if (!cardsText) return alert("لا توجد كروت!");
+    if (!cardsText) return;
     
     const cardsArray = cardsText.split('\n').filter(c => c.trim() !== "");
     
     try {
-        // التحقق من وجود firebase
-        if (typeof firebase === 'undefined') {
-            return alert("❌ خطأ: مكتبة Firebase غير متصلة!");
-        }
+        if (typeof firebase === 'undefined') throw new Error("Firebase غير متصل!");
 
-        // الحفظ
-        const dbRef = firebase.database().ref('cards');
+        // الحفظ في المسار المخصص للباقة
+        const dbRef = firebase.database().ref('packages/' + pkg + '/cards');
+        
         cardsArray.forEach(card => {
             dbRef.push({
                 code: card,
-                package: pkg,
                 status: "available",
                 createdAt: firebase.database.ServerValue.TIMESTAMP
             });
         });
         
-        // النجاح
-        alert("✅ اكتمل الحفظ بنجاح!");
+        showModernToast("✅ تم حفظ " + cardsArray.length + " كرت بنجاح");
         document.getElementById('preview-area').innerHTML = "";
         
     } catch (error) {
-        alert("❌ خطأ أثناء الحفظ: " + error.message);
+        showModernToast("❌ خطأ: " + error.message);
     }
+}
+
+function showModernToast(message) {
+    const toast = document.createElement('div');
+    toast.innerText = message;
+    toast.style.position = 'fixed';
+    toast.style.bottom = '20px';
+    toast.style.left = '50%';
+    toast.style.transform = 'translateX(-50%)';
+    toast.style.background = '#333';
+    toast.style.color = '#fff';
+    toast.style.padding = '12px 20px';
+    toast.style.borderRadius = '30px';
+    toast.style.zIndex = '9999';
+    toast.style.fontSize = '14px';
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
 }
