@@ -3,21 +3,23 @@ function saveToDatabase(pkg) {
     const cardsArray = cardsText.split('\n').filter(c => c.trim() !== "");
     
     try {
-        // نستخدم المسار المباشر 'cards' فقط
-        // وغالباً ما يكون هذا هو المسار الذي يراقبه تطبيقك
-        const dbRef = firebase.database().ref('cards');
+        // المسار هنا يجب أن يكون دقيقاً حسب القائمة المنسدلة
+        // في نظام TawasulNet، المجلد الفرعي للباقة غالباً ما يكون هو الـ pkg نفسه
+        const dbRef = firebase.database().ref('cards/' + pkg);
         
         cardsArray.forEach(card => {
             dbRef.push({
                 code: card,
-                package: pkg, // تخزين اسم الباقة داخل الكرت نفسه
-                status: "available",
+                status: "available", // هذا هو الشرط الذي يقرأه نظامك ليظهر الكرت
                 createdAt: firebase.database.ServerValue.TIMESTAMP
             });
         });
         
-        showModernToast("✅ تم إضافة الكروت بنجاح");
+        showModernToast("✅ تم إضافة الكروت للباقة بنجاح");
         document.getElementById('preview-area').innerHTML = "";
+        
+        // تحديث الصفحة تلقائياً لتظهر الكروت الجديدة في قائمة الـ 19 كرت
+        setTimeout(() => { location.reload(); }, 1000);
         
     } catch (error) {
         showModernToast("❌ خطأ: " + error.message);
