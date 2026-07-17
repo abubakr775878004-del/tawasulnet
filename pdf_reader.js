@@ -29,36 +29,36 @@ async function processPDF() {
                 previewArea.innerHTML = `
                     <p style="color:green;">تم استخراج ${uniqueCards.length} كرت للباقة ${selectedPackage}</p>
                     <textarea id="cards-result" style="width:100%; height:100px;">${uniqueCards.join("\n")}</textarea>
-                    <button id="save-btn" style="background:#28a745; color:white; width:100%; padding:10px; border:none; margin-top:10px;">حفظ الكروت في السيرفر</button>
+                    <button id="save-btn-final" style="background:#28a745; color:white; width:100%; padding:10px; border:none; margin-top:10px;">حفظ الكروت في السيرفر</button>
                 `;
                 
-                // ربط الزر برمجياً لضمان الاستجابة
-                document.getElementById('save-btn').addEventListener('click', function() {
+                // ربط الزر مباشرة بعد ظهوره
+                document.getElementById('save-btn-final').onclick = function() {
                     saveToDatabase(selectedPackage);
-                });
-
+                };
             } else {
-                previewArea.innerHTML = "<p style='color:red;'>لم يتم العثور على كروت! تأكد من محتوى الملف.</p>";
+                previewArea.innerHTML = "<p style='color:red;'>لم يتم العثور على كروت!</p>";
             }
         } catch (e) {
-            previewArea.innerHTML = "حدث خطأ: " + e.message;
+            previewArea.innerHTML = "خطأ في المعالجة: " + e.message;
         }
     };
     reader.readAsArrayBuffer(fileInput.files[0]);
 }
 
 function saveToDatabase(pkg) {
-    console.log("محاولة الحفظ بدأت..."); // للتحقق في وحدة التحكم
     const cardsText = document.getElementById('cards-result').value;
-    if (!cardsText) return alert("لا توجد كروت للحفظ!");
+    if (!cardsText) return alert("لا توجد كروت!");
     
     const cardsArray = cardsText.split('\n').filter(c => c.trim() !== "");
     
     try {
-        if (typeof firebase === 'undefined' || !firebase.database) {
-            throw new Error("Firebase غير متصل!");
+        // التحقق من وجود firebase
+        if (typeof firebase === 'undefined') {
+            return alert("❌ خطأ: مكتبة Firebase غير متصلة!");
         }
 
+        // الحفظ
         const dbRef = firebase.database().ref('cards');
         cardsArray.forEach(card => {
             dbRef.push({
@@ -69,10 +69,11 @@ function saveToDatabase(pkg) {
             });
         });
         
+        // النجاح
         alert("✅ اكتمل الحفظ بنجاح!");
         document.getElementById('preview-area').innerHTML = "";
         
     } catch (error) {
-        alert("❌ فشل الحفظ: " + error.message);
+        alert("❌ خطأ أثناء الحفظ: " + error.message);
     }
 }
