@@ -1,17 +1,13 @@
-// --- دالة قراءة الـ PDF (القراءة الأصلية التي تعمل معك) ---
 async function processPDF() {
     const fileInput = document.getElementById('pdf-file');
     const previewArea = document.getElementById('preview-area');
-    const packageSelect = document.getElementById('target-package');
-    const selectedText = packageSelect.options[packageSelect.selectedIndex].text;
-    const packageId = selectedText.match(/\d+/)[0]; 
     
     if (!fileInput.files[0]) {
         Swal.fire("تنبيه", "يرجى اختيار ملف PDF أولاً", "warning");
         return;
     }
     
-    previewArea.innerHTML = "جاري المعالجة...";
+    previewArea.innerHTML = "جاري استخراج الأرقام...";
     const reader = new FileReader();
 
     reader.onload = async function() {
@@ -27,6 +23,7 @@ async function processPDF() {
                 content.items.forEach(item => text += item.str + " ");
             }
 
+            // استخراج الأرقام (نفس المنطق القديم)
             const regex = /\b(0\d{7,8}|[1-9]\d{5,8})\b/g;
             let matches = text.match(regex) || [];
             const uniqueCards = [...new Set(matches.filter(c => !c.startsWith("77")))];
@@ -35,55 +32,24 @@ async function processPDF() {
                 previewArea.innerHTML = `
                     <div style="text-align: center; margin-top:10px;">
                         <p style="color:green; font-weight:bold;">تم استخراج ${uniqueCards.length} كرت</p>
-                        <button id="save-btn-final" style="background:#059669; color:white; width:100%; padding:15px; border:none; border-radius:8px; cursor:pointer;">إرسال الكروت وتحديث المخزون</button>
+                        <textarea id="cards-result" style="width:100%; height:200px; direction:ltr; text-align:left; border:1px solid #ccc; padding:10px; border-radius:5px;">${uniqueCards.join("\n")}</textarea>
+                        <button id="copy-btn" style="background:#28a745; color:white; width:100%; padding:15px; border:none; border-radius:5px; margin-top:10px; cursor:pointer;">نسخ جميع الكروت</button>
                     </div>
                 `;
-                document.getElementById('save-btn-final').onclick = () => injectCards(packageId, uniqueCards);
+                
+                // إضافة وظيفة النسخ بضغطة زر
+                document.getElementById('copy-btn').onclick = () => {
+                    const textarea = document.getElementById('cards-result');
+                    textarea.select();
+                    document.execCommand('copy');
+                    Swal.fire("تم النسخ", "الآن يمكنك لصق الكروت يدوياً في لوحة التحكم", "success");
+                };
             } else {
-                previewArea.innerHTML = "<p style='color:red;'>لم يتم العثور على أرقام!</p>";
+                previewArea.innerHTML = "<p style='color:red;'>لم يتم العثور على أرقام كروت!</p>";
             }
         } catch (e) {
-            Swal.fire("خطأ", "فشل المعالجة: " + e.message, "error");
+            Swal.fire("خطأ", "فشل في القراءة: " + e.message, "error");
         }
     };
     reader.readAsArrayBuffer(fileInput.files[0]);
-}
-
-// --- دالة الحقن الاحترافية والمعدلة (المنطق الجديد) ---
-async function injectCards(packageId, cardsArray) {
-    const db = firebase.database();
-    
-    // المسار للكرت (كما كان يعمل)
-    const cardsRef = db.ref('packets/' + packageId);
-    // المسار للعداد (المسار الذي اقترحه المبرمج، يمكنك تغييره لاحقاً)
-    const counterRef = db.ref('tariffs/' + packageId + '/stock');
-
-    try {
-        // 1. استخدام Promise.all لضمان إرسال كافة الكروت قبل الانتقال للخطوة التالية
-        const promises = cardsArray.map(card =>
-            cardsRef.push({
-                code: card,
-                status: "available",
-                createdAt: firebase.database.ServerValue.TIMESTAMP
-            })
-        );
-
-        await Promise.all(promises);
-
-        // 2. تحديث العداد باستخدام Transaction لضمان الدقة
-        await counterRef.transaction(current => {
-            return (current || 0) + cardsArray.length;
-        });
-
-        Swal.fire({
-            title: "تم بنجاح",
-            text: `تمت إضافة ${cardsArray.length} كرت وتحديث العداد.`,
-            icon: "success"
-        });
-
-        document.getElementById("preview-area").innerHTML = "";
-
-    } catch (err) {
-        Swal.fire("خطأ", "فشل أثناء الحقن: " + err.message, "error");
-    }
 }
