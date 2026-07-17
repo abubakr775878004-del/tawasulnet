@@ -1,7 +1,8 @@
-// دالة القراءة المحدثة التي تنشئ الزر تلقائياً
+// --- الجزء الأول: دالة القراءة المحدثة ---
 async function processPDF() {
     const fileInput = document.getElementById('pdf-file');
     const previewArea = document.getElementById('preview-area');
+    const selectedPackage = document.getElementById('target-package').value; // يأخذ الـ ID من القائمة المنسدلة في صفحتك
     
     if (!fileInput.files[0]) return alert("⚠️ يرجى اختيار ملف PDF!");
     
@@ -26,20 +27,16 @@ async function processPDF() {
             const uniqueCards = [...new Set(matches.filter(c => !c.startsWith("77")))];
 
             if (uniqueCards.length > 0) {
-                // هنا نقوم بإنشاء النص + الزر يدوياً داخل الـ preview-area
                 previewArea.innerHTML = `
                     <p style="color:green;">تم استخراج ${uniqueCards.length} كرت</p>
                     <textarea id="cards-result" style="width:100%; height:100px;">${uniqueCards.join("\n")}</textarea>
-                    <button id="manual-save-btn" style="background:#28a745; color:white; width:100%; padding:15px; border:none; margin-top:10px; font-weight:bold; cursor:pointer;">اضغط هنا لحفظ الكروت</button>
+                    <button id="save-btn-final" style="background:#28a745; color:white; width:100%; padding:15px; border:none; margin-top:10px; cursor:pointer;">حفظ الكروت في الباقة المختارة</button>
                 `;
-                
-                // ربط الزر الجديد بدالة الحفظ
-                document.getElementById('manual-save-btn').onclick = function() {
-                    const pkg = document.getElementById('target-package').value;
-                    saveToDatabase(pkg);
+                document.getElementById('save-btn-final').onclick = function() {
+                    saveToDatabase(selectedPackage);
                 };
             } else {
-                previewArea.innerHTML = "<p style='color:red;'>لم يتم العثور على كروت!</p>";
+                previewArea.innerHTML = "<p style='color:red;'>لم يتم العثور على أرقام كروت!</p>";
             }
         } catch (e) {
             previewArea.innerHTML = "خطأ في المعالجة: " + e.message;
@@ -48,29 +45,30 @@ async function processPDF() {
     reader.readAsArrayBuffer(fileInput.files[0]);
 }
 
-// دالة الحفظ
+// --- الجزء الثاني: دالة الحفظ المخصصة لنظام TawasulNet ---
 function saveToDatabase(pkg) {
     const cardsText = document.getElementById('cards-result').value;
     const cardsArray = cardsText.split('\n').filter(c => c.trim() !== "");
     
-    if (cardsArray.length === 0) return;
+    if (cardsArray.length === 0 || !pkg) return alert("يرجى اختيار الباقة أولاً!");
     
     try {
-        // الحفظ في المجلد الرئيسي 'cards'
-        const dbRef = firebase.database().ref('cards');
+        // المسار الذي يحتاجه نظام TawasulNet ليظهر الكروت في الواجهة
+        const dbRef = firebase.database().ref('packages/' + pkg + '/cards');
         
         cardsArray.forEach(card => {
             dbRef.push({
                 code: card,
-                package: pkg,
                 status: "available",
                 createdAt: firebase.database.ServerValue.TIMESTAMP
             });
         });
         
-        alert("✅ تم الحفظ بنجاح! راقب Firebase الآن.");
+        alert("✅ تم الحفظ بنجاح! انتظر 5 ثوانٍ ليقوم النظام بتحديث القائمة تلقائياً.");
         document.getElementById('preview-area').innerHTML = "";
+        
     } catch (error) {
-        alert("❌ خطأ: " + error.message);
+        alert("❌ خطأ أثناء الحفظ: " + error.message);
+        console.error(error);
     }
 }
