@@ -1,12 +1,16 @@
 async function processPDF() {
     const fileInput = document.getElementById('pdf-file');
+    // هذا هو المربع الذي سيظهر فيه النتائج
+    const previewArea = document.getElementById('preview-area');
     
     if (!fileInput.files[0]) {
         Swal.fire("تنبيه", "يرجى اختيار ملف PDF أولاً", "warning");
         return;
     }
     
+    previewArea.innerHTML = "جاري استخراج الأرقام...";
     const reader = new FileReader();
+
     reader.onload = async function() {
         try {
             const typedarray = new Uint8Array(this.result);
@@ -25,24 +29,13 @@ async function processPDF() {
             const uniqueCards = [...new Set(matches.filter(c => !c.startsWith("77")))];
 
             if (uniqueCards.length > 0) {
-                // إظهار نافذة منبثقة احترافية تحتوي على جميع الأكواد
-                Swal.fire({
-                    title: 'تم استخراج ' + uniqueCards.length + ' كرت',
-                    html: `<textarea id="cards-textarea" style="width:100%; height:300px; font-family:monospace; direction:ltr; text-align:left;">${uniqueCards.join("\n")}</textarea>`,
-                    confirmButtonText: 'نسخ الأكواد',
-                    didOpen: () => {
-                        document.getElementById('cards-textarea').select();
-                    }
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        const copyText = document.getElementById("cards-textarea");
-                        copyText.select();
-                        document.execCommand("copy");
-                        Swal.fire("تم النسخ!", "الآن يمكنك لصق الأكواد في النظام.", "success");
-                    }
-                });
+                // هنا نقوم بإنشاء مربع النص بنفس الشكل الذي طلبته
+                previewArea.innerHTML = `
+                    <p style="text-align:center; color:green; font-weight:bold;">تم استخراج ${uniqueCards.length} كرت</p>
+                    <textarea id="cards-output" style="width:100%; height:200px; padding:10px; border:1px solid #ccc; border-radius:5px; font-family:monospace; direction:ltr; text-align:left;">${uniqueCards.join("\n")}</textarea>
+                `;
             } else {
-                Swal.fire("خطأ", "لم يتم العثور على أرقام كروت!", "error");
+                previewArea.innerHTML = "<p style='color:red;'>لم يتم العثور على أرقام كروت!</p>";
             }
         } catch (e) {
             Swal.fire("خطأ", "فشل في القراءة: " + e.message, "error");
