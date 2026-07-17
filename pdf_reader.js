@@ -49,22 +49,19 @@ function saveToDatabase(pkg) {
     const cardsArray = cardsText.split('\n').filter(c => c.trim() !== "");
     
     try {
-        // اختبار التوصيل: إذا كان firebase غير معرف، سيظهر هذا الخطأ فوراً
-        if (typeof firebase === 'undefined') throw new Error("Firebase غير معرف");
-
-        // سنقوم بمحاولة حفظ البيانات في "المسار العام" لنتأكد هل المشكلة في "مسار الباقة" أم في "الربط"
-        const db = firebase.database();
+        // الربط المباشر بناءً على قيمة الباقة المحددة
+        // هذا هو المسار الذي يقرأ منه نظامك في العادة
+        const dbRef = firebase.database().ref('cards/' + pkg);
         
         cardsArray.forEach(card => {
-            // سنحفظ في مسار 'cards' مباشرة بدون تعقيدات الباقة لنختبر هل تصل البيانات أم لا
-            db.ref('cards').push({
+            dbRef.push({
                 code: card,
-                targetPackage: pkg, 
+                status: "available",
                 createdAt: firebase.database.ServerValue.TIMESTAMP
             });
         });
         
-        showModernToast("✅ تم الإرسال إلى السيرفر!");
+        showModernToast("✅ اكتمل الحفظ بنجاح");
         document.getElementById('preview-area').innerHTML = "";
         
     } catch (error) {
@@ -85,6 +82,7 @@ function showModernToast(message) {
     toast.style.borderRadius = '20px';
     toast.style.zIndex = '9999';
     toast.style.fontSize = '14px';
+    toast.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 2500);
 }
