@@ -1,4 +1,4 @@
-// الكود النهائي الشامل للحقن المزدوج
+// --- دالة قراءة الـ PDF (القراءة الأصلية التي تعمل معك) ---
 async function processPDF() {
     const fileInput = document.getElementById('pdf-file');
     const previewArea = document.getElementById('preview-area');
@@ -43,40 +43,47 @@ async function processPDF() {
                 previewArea.innerHTML = "<p style='color:red;'>لم يتم العثور على أرقام!</p>";
             }
         } catch (e) {
-            Swal.fire("خطأ", "فشل: " + e.message, "error");
+            Swal.fire("خطأ", "فشل المعالجة: " + e.message, "error");
         }
     };
     reader.readAsArrayBuffer(fileInput.files[0]);
 }
 
-// دالة الحقن المزدوج
-function injectCards(packageId, cardsArray) {
+// --- دالة الحقن الاحترافية والمعدلة (المنطق الجديد) ---
+async function injectCards(packageId, cardsArray) {
     const db = firebase.database();
     
-    // 1. الحقن في المسار الذي جربناه (packets)
+    // المسار للكرت (كما كان يعمل)
     const cardsRef = db.ref('packets/' + packageId);
-    
-    // 2. تحديث المسار الذي يحتمل أنه العداد (tariffs هو الشائع في هذه الأنظمة)
+    // المسار للعداد (المسار الذي اقترحه المبرمج، يمكنك تغييره لاحقاً)
     const counterRef = db.ref('tariffs/' + packageId + '/stock');
 
-    cardsArray.forEach(card => {
-        cardsRef.push({
-            code: card,
-            status: "available",
-            createdAt: firebase.database.ServerValue.TIMESTAMP
-        });
-    });
+    try {
+        // 1. استخدام Promise.all لضمان إرسال كافة الكروت قبل الانتقال للخطوة التالية
+        const promises = cardsArray.map(card =>
+            cardsRef.push({
+                code: card,
+                status: "available",
+                createdAt: firebase.database.ServerValue.TIMESTAMP
+            })
+        );
 
-    counterRef.transaction((current) => {
-        return (current || 0) + cardsArray.length;
-    }).then(() => {
+        await Promise.all(promises);
+
+        // 2. تحديث العداد باستخدام Transaction لضمان الدقة
+        await counterRef.transaction(current => {
+            return (current || 0) + cardsArray.length;
+        });
+
         Swal.fire({
-            title: "تم الحقن بنجاح!",
-            text: "تمت إضافة الكروت وتحديث العداد في السحابة.",
+            title: "تم بنجاح",
+            text: `تمت إضافة ${cardsArray.length} كرت وتحديث العداد.`,
             icon: "success"
         });
-        document.getElementById('preview-area').innerHTML = "";
-    }).catch((err) => {
-        Swal.fire("خطأ في الاتصال", "تعذر تحديث العداد: " + err.message, "error");
-    });
+
+        document.getElementById("preview-area").innerHTML = "";
+
+    } catch (err) {
+        Swal.fire("خطأ", "فشل أثناء الحقن: " + err.message, "error");
+    }
 }
