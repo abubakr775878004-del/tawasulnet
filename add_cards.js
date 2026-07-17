@@ -1,53 +1,51 @@
-// --- وظائف نظام المجموعات الجديد ---
-
-// 1. إضافة كروت مع وسم التاريخ (يعمل تلقائياً عند حقن الكروت)
-async function addCardsByBatch(packageId, cardsArray) {
+// دالة عرض الكروت مرتبة بالتاريخ مع خيارات الحذف الجماعي
+async function displayGroupedCards(packageId) {
     const db = firebase.database();
-    const today = new Date().toISOString().split('T')[0].replace(/-/g, '_'); 
-    
-    // حفظ الكروت تحت تاريخ اليوم لتسهيل حذف المجموعة لاحقاً
-    const batchRef = db.ref(`packets/${packageId}/batches/${today}`);
-    
-    for (let card of cardsArray) {
-        await batchRef.push({
-            code: card,
-            status: "available",
-            createdAt: firebase.database.ServerValue.TIMESTAMP
-        });
-    }
+    const container = document.getElementById('cards-results'); // المكان الذي تظهر فيه الكروت حالياً
+    container.innerHTML = "جاري تحميل المجموعات...";
 
-    // تحديث العداد
-    const counterRef = db.ref(`tariffs/${packageId}/stock`);
-    counterRef.transaction(current => (current || 0) + cardsArray.length);
-    
-    Swal.fire("تمت الإضافة", `تمت إضافة ${cardsArray.length} كرت تحت تاريخ ${today}`, "success");
-}
+    db.ref(`packets/${packageId}/batches`).on('value', snapshot => {
+        container.innerHTML = ""; // مسح القديم
+        const batches = snapshot.val();
 
-// 2. دالة الحذف الجماعي لمجموعة كاملة حسب التاريخ
-async function deleteBatch(packageId, dateString) {
-    const db = firebase.database();
-    
-    Swal.fire({
-        title: 'تنبيه',
-        text: "هل تريد حذف كافة كروت هذه المجموعة بتاريخ " + dateString + "؟",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'نعم، حذف الكل'
-    }).then(async (result) => {
-        if (result.isConfirmed) {
-            const batchRef = db.ref(`packets/${packageId}/batches/${dateString}`);
-            
-            // جلب عدد الكروت أولاً لتحديث العداد
-            batchRef.once('value', snapshot => {
-                const count = snapshot.numChildren();
-                batchRef.remove().then(() => {
-                    const counterRef = db.ref(`tariffs/${packageId}/stock`);
-                    counterRef.transaction(current => (current || 0) - count);
-                    Swal.fire("تم الحذف", "تم حذف المجموعة وتحديث العداد", "success");
-                });
-            });
+        if (!batches) {
+            container.innerHTML = "<p>لا توجد كروت في هذه الباقة.</p>";
+            return;
         }
+
+        Object.keys(batches).forEach(date => {
+            const batch = batches[date];
+            const batchDiv = document.createElement('div');
+            batchDiv.style.border = "1px solid #ccc";
+            batchDiv.style.margin = "10px 0";
+            batchDiv.style.padding = "10px";
+
+            batchDiv.innerHTML = `
+                <div style="background:#f4f4f4; padding:5px; display:flex; justify-content:space-between;">
+                    <strong>مجموعة تاريخ: ${date.replace(/_/g, '-')}</strong>
+                    <button onclick="deleteBatch('${packageId}', '${date}')" style="color:red;">حذف المجموعة كاملة</button>
+                </div>
+            `;
+
+            // عرض الكروت داخل المجموعة
+            Object.keys(batch).forEach(cardKey => {
+                const card = batch[cardKey];
+                const cardDiv = document.createElement('div');
+                cardDiv.innerHTML = `
+                    <input type="checkbox" class="card-checkbox" value="${cardKey}">
+                    ${card.code} 
+                    <button onclick="deleteSingleCard('${packageId}', '${date}', '${cardKey}')">حذف</button>
+                `;
+                batchDiv.appendChild(cardDiv);
+            });
+            container.appendChild(batchDiv);
+        });
     });
 }
 
-console.log("تم تحميل نظام المجموعات والحذف الجماعي بنجاح!");
+// دالة لحذف كرت واحد داخل المجموعة
+async function deleteSingleCard(packageId, date, cardKey) {
+    firebase.database().ref(`packets/${packageId}/batches/${date}/${cardKey}`).remove();
+    // تحديث العداد
+    firebase.database().ref(`tariffs/${packageId}/stock`).transaction(c => (c || 0) - 1);
+}
