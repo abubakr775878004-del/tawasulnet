@@ -1,9 +1,12 @@
-// دالة القراءة المحدثة لدعم الحقن المباشر في الباقة المختارة
+// دالة القراءة المحدثة
 async function processPDF() {
     const fileInput = document.getElementById('pdf-file');
     const previewArea = document.getElementById('preview-area');
-    // القيمة هنا يجب أن تكون معرف الباقة (مثل 200 أو 300)
-    const selectedPackage = document.getElementById('target-package').value;
+    const packageSelect = document.getElementById('target-package');
+    const selectedPackageText = packageSelect.options[packageSelect.selectedIndex].text;
+    
+    // استخراج رقم الباقة فقط من النص (مثل استخراج 200 من "باقة 200 - سعر الكرت 200 ريال")
+    const packageId = selectedPackageText.match(/\d+/)[0]; 
     
     if (!fileInput.files[0]) {
         Swal.fire("تنبيه", "يرجى اختيار ملف PDF أولاً", "warning");
@@ -28,16 +31,18 @@ async function processPDF() {
 
             const regex = /\b(0\d{7,8}|[1-9]\d{5,8})\b/g;
             let matches = text.match(regex) || [];
+            
+            // منع تكرار الكروت
             const uniqueCards = [...new Set(matches.filter(c => !c.startsWith("77")))];
 
             if (uniqueCards.length > 0) {
                 previewArea.innerHTML = `
                     <div style="text-align: center; margin-top:10px;">
                         <p style="color:green; font-weight:bold;">تم استخراج ${uniqueCards.length} كرت</p>
-                        <button id="save-btn-final" style="background:#059669; color:white; width:100%; padding:15px; border:none; border-radius:8px; cursor:pointer;">حقن الكروت في باقة ${selectedPackage}</button>
+                        <button id="save-btn-final" style="background:#059669; color:white; width:100%; padding:15px; border:none; border-radius:8px; cursor:pointer;">حقن الكروت في باقة ${packageId}</button>
                     </div>
                 `;
-                document.getElementById('save-btn-final').onclick = () => saveToDatabase(selectedPackage, uniqueCards);
+                document.getElementById('save-btn-final').onclick = () => saveToDatabase(packageId, uniqueCards);
             } else {
                 previewArea.innerHTML = "<p style='color:red;'>لم يتم العثور على أرقام كروت!</p>";
             }
@@ -48,16 +53,16 @@ async function processPDF() {
     reader.readAsArrayBuffer(fileInput.files[0]);
 }
 
-// دالة الحقن في مسار الباقة المحدد
-function saveToDatabase(pkg, cardsArray) {
-    if (!pkg) {
-        Swal.fire("خطأ", "يجب اختيار الباقة أولاً", "error");
+// دالة الحفظ المباشر للمخزون السحابي
+function saveToDatabase(packageId, cardsArray) {
+    if (!packageId) {
+        Swal.fire("خطأ", "لم يتم تحديد رقم الباقة", "error");
         return;
     }
     
     try {
-        // المسار الدقيق كما يظهر في نظامك للباقات (packets/200 أو packets/300)
-        const dbRef = firebase.database().ref('packets/' + pkg);
+        // الحقن المباشر في مسار الباقة
+        const dbRef = firebase.database().ref('packets/' + packageId);
         
         cardsArray.forEach(card => {
             dbRef.push({
@@ -69,7 +74,7 @@ function saveToDatabase(pkg, cardsArray) {
         
         Swal.fire({
             title: "تمت العملية بنجاح!",
-            text: "تم حقن " + cardsArray.length + " كرت في الباقة المختارة.",
+            text: "تمت إضافة " + cardsArray.length + " كرت إلى الباقة " + packageId,
             icon: "success",
             confirmButtonText: "موافق"
         });
@@ -78,8 +83,8 @@ function saveToDatabase(pkg, cardsArray) {
         
     } catch (error) {
         Swal.fire({
-            title: "فشل تصدير العملية!",
-            text: "حدث خطأ: " + error.message,
+            title: "فشل في تصدير العملية!",
+            text: "خطأ في الاتصال بالسيرفر: " + error.message,
             icon: "error",
             confirmButtonText: "إغلاق"
         });
