@@ -1,9 +1,10 @@
+// دالة معالجة الـ PDF الكاملة
 async function processPDF() {
     const fileInput = document.getElementById('pdf-file');
     const previewArea = document.getElementById('preview-area');
     const selectedPackage = document.getElementById('target-package').value;
     
-    if (!fileInput.files[0]) return alert("يرجى اختيار ملف PDF!");
+    if (!fileInput.files[0]) return alert("⚠️ يرجى اختيار ملف PDF!");
     
     previewArea.innerHTML = "جاري المعالجة...";
     const reader = new FileReader();
@@ -11,7 +12,6 @@ async function processPDF() {
     reader.onload = async function() {
         try {
             const typedarray = new Uint8Array(this.result);
-            // إعادة ضبط الواركر كما كان في النسخة الأصلية
             pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
             const pdf = await pdfjsLib.getDocument(typedarray).promise;
             
@@ -28,11 +28,10 @@ async function processPDF() {
 
             if (uniqueCards.length > 0) {
                 previewArea.innerHTML = `
-                    <p style="color:green;">تم استخراج ${uniqueCards.length} كرت للباقة ${selectedPackage}</p>
+                    <p style="color:green;">تم استخراج ${uniqueCards.length} كرت</p>
                     <textarea id="cards-result" style="width:100%; height:100px;">${uniqueCards.join("\n")}</textarea>
                     <button id="save-btn-final" style="background:#28a745; color:white; width:100%; padding:10px; border:none; margin-top:10px;">حفظ الكروت في السيرفر</button>
                 `;
-                
                 document.getElementById('save-btn-final').onclick = function() {
                     saveToDatabase(selectedPackage);
                 };
@@ -40,36 +39,39 @@ async function processPDF() {
                 previewArea.innerHTML = "<p style='color:red;'>لم يتم العثور على كروت!</p>";
             }
         } catch (e) {
-            previewArea.innerHTML = "خطأ في المعالجة: " + e.message;
+            previewArea.innerHTML = "خطأ: " + e.message;
         }
     };
     reader.readAsArrayBuffer(fileInput.files[0]);
 }
 
+// دالة الحفظ المدمجة مع النظام (استخدام المتغير db المعتمد في نظامك)
 function saveToDatabase(pkg) {
     const cardsText = document.getElementById('cards-result').value;
-    if (!cardsText) return;
-    
     const cardsArray = cardsText.split('\n').filter(c => c.trim() !== "");
     
+    if (cardsArray.length === 0) return;
+    
     try {
-        // الحفظ في المسار العام 'cards' مع تحديد الباقة كخاصية داخل الكرت
-        const dbRef = firebase.database().ref('cards');
+        // نستخدم المتغير db إذا كان معرفاً في نظامك، وإلا نستخدم firebase.database()
+        const dbRef = (typeof db !== 'undefined' ? db : firebase.database()).ref('packages/' + pkg);
         
         cardsArray.forEach(card => {
             dbRef.push({
                 code: card,
-                package: pkg, // إضافة اسم الباقة هنا
                 status: "available",
                 createdAt: firebase.database.ServerValue.TIMESTAMP
             });
         });
         
-        // إشعار بسيط
-        alert("✅ تم الحفظ بنجاح");
+        alert("✅ تم رفع " + cardsArray.length + " كرت إلى الباقة بنجاح!");
         document.getElementById('preview-area').innerHTML = "";
         
+        // إعادة تحميل الصفحة لضمان ظهور الكروت الجديدة في قائمة النظام
+        setTimeout(() => { location.reload(); }, 1500);
+        
     } catch (error) {
-        alert("❌ خطأ: " + error.message);
+        alert("❌ خطأ أثناء الحفظ: " + error.message);
+        console.error("خطأ الربط:", error);
     }
 }
