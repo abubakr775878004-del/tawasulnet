@@ -21,12 +21,13 @@ async function processPDF() {
                 content.items.forEach(item => text += item.str + " ");
             }
 
-            // النمط الجديد: 
-            // 1. يبحث عن أرقام بطول 5 إلى 9 خانات (\d{5,9})
-            // 2. يطبق شرط الاستثناء: لا يقبل أي رقم طوله 9 خانات ويبدأ بـ 77
-            const regex = /\b(?!(77\d{7})\b)(\d{5,9})\b/g;
-            const rawCards = text.match(regex) || [];
-            const uniqueCards = [...new Set(rawCards)];
+            // هذا هو النمط الذي كان يعمل ويستخرج الأرقام التي تبدأ بصفر أو أرقام عادية
+            // مع إضافة شرط منع الأرقام التي تبدأ بـ 77 (أرقام الجوال)
+            const regex = /\b(0\d{7,8}|[1-9]\d{5,8})\b/g;
+            const matches = text.match(regex) || [];
+            
+            // تصفية النتائج: استبعاد أي رقم يبدأ بـ 77، والحصول على قيم فريدة فقط
+            const uniqueCards = [...new Set(matches.filter(c => !c.startsWith("77")))];
 
             if (uniqueCards.length > 0) {
                 previewArea.innerHTML = `
